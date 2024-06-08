@@ -14,10 +14,10 @@ pub struct ClaimRequest {
     #[serde(rename = "type")]
     #[schema(example = "claim")]
     pub request_type: String,
-    #[schema(example = "0xAbC1234DeF5678GhIjK")]
+    #[schema(example = "EQBcofB8fWf9JoFqcxN3tkBOhXJldhZ2YmpL1v2mUikxGXO8")]
     pub address: String,
-    #[schema(example = 100.0)]
-    pub amount: f64,
+    #[schema(example = 1)]
+    pub amount: u32,
 }
 
 #[utoipa::path(

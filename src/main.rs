@@ -1,13 +1,15 @@
 use axum::Router;
+use dotenv::dotenv;
+use konnektoren_api::routes;
 use routes::openapi::ApiDoc;
 use std::net::SocketAddr;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use konnektoren_api::routes;
-
 #[tokio::main]
 async fn main() {
+    pretty_env_logger::init();
+    dotenv().ok();
     let app = Router::new()
         .nest("/api/v1", routes::v1::create_router())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()));

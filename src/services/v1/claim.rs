@@ -1,5 +1,8 @@
 use crate::routes::v1::claim::ClaimRequest;
 use axum::{http::StatusCode, Json};
+use std::env;
+
+use crate::ton::{create_key_pair, create_testnet_client, transfer_jetton_token};
 
 pub async fn claim_tokens_service(
     payload: ClaimRequest,
@@ -8,7 +11,30 @@ pub async fn claim_tokens_service(
         return Err((StatusCode::BAD_REQUEST, "Invalid request type".into()));
     }
 
-    println!("Received claim request: {:?}", payload);
+    log::info!("Received claim request: {:?}", payload);
 
-    Ok(Json("Token claimed successfully"))
+    let client = match create_testnet_client().await {
+        Ok(client) => client,
+        Err(err) => return Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
+    };
+
+    let mnemonic = env::var("MNEMONIC").unwrap();
+    let key_pair = create_key_pair(&mnemonic).await.unwrap();
+
+    let contract_address = env::var("CONTRACT_ADDRESS").unwrap();
+    let faucet_address = env::var("FAUCET_ADDRESS").unwrap();
+
+    match transfer_jetton_token(
+        &client,
+        &key_pair,
+        &contract_address,
+        &faucet_address,
+        &payload.address,
+        payload.amount as u128,
+    )
+    .await
+    {
+        Ok(_) => Ok(Json("Token claimed successfully")),
+        Err(err) => Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
+    }
 }
