@@ -12,7 +12,7 @@ async fn main() {
     dotenv().ok();
     let app = Router::new()
         .nest("/api/v1", routes::v1::create_router())
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()));
+        .merge(SwaggerUi::new("/docs").url("/api-doc/openapi.json", ApiDoc::openapi()));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
 

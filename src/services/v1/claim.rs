@@ -2,7 +2,7 @@ use crate::routes::v1::claim::ClaimRequest;
 use axum::{http::StatusCode, Json};
 use std::env;
 
-use crate::ton::{create_key_pair, create_testnet_client, transfer_jetton_token};
+use crate::ton::{create_key_pair, create_testnet_client, send_jetton, transfer_jetton_token};
 
 pub async fn claim_tokens_service(
     payload: ClaimRequest,
@@ -24,11 +24,10 @@ pub async fn claim_tokens_service(
     let contract_address = env::var("CONTRACT_ADDRESS").unwrap();
     let faucet_address = env::var("FAUCET_ADDRESS").unwrap();
 
-    match transfer_jetton_token(
+    match send_jetton(
         &client,
         &key_pair,
         &contract_address,
-        &faucet_address,
         &payload.address,
         payload.amount as u128,
     )

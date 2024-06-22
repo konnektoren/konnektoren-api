@@ -94,8 +94,8 @@ pub async fn transfer_jetton_token(
     let sender_address = TonAddress::from_base64_url(sender_address)?;
     let receiver_address = TonAddress::from_base64_url(receiver_address)?;
 
-    log_wallet_info(client, &sender_address, "bob");
-    log_wallet_info(client, &receiver_address, "alice");
+    log_wallet_info(client, &sender_address, "bob").await?;
+    log_wallet_info(client, &receiver_address, "alice").await?;
 
     // Get the latest seqno
     let seqno = get_seqno(client, &sender_address).await?;
@@ -138,22 +138,25 @@ pub async fn transfer_jetton_token(
     let receiver_balance = receiver_wallet.get_wallet_data().await?.balance;
     log::info!("Receiver (Alice) Balance: {:?}", receiver_balance);
 
-    let jetton_transfer = JettonTransferMessage::new(&receiver_jetton_wallet_addr, &jetton_amount)
+    let jetton_transfer = JettonTransferMessage::new(&receiver_address, &jetton_amount)
         .with_query_id(query_id)
         .with_response_destination(&sender_address)
         .build()?;
 
-    let ton_amount = BigUint::from(200000000u64); // 0.2 TON for example
-    let transfer = TransferMessage::new(&sender_address, &ton_amount)
-        .with_data(jetton_transfer)
+    let ton_amount = BigUint::from(1000000000u64); // 1 TON for example
+    let transfer = TransferMessage::new(&receiver_wallet.address(), &ton_amount)
+        //.with_data(jetton_transfer)
         .build()?;
 
     let transfer_cells: Vec<Arc<Cell>> = vec![Arc::new(transfer)];
 
+    let seqno = get_seqno(client, &payer_wallet.address).await?;
+    log::info!("Seqno: {}", seqno);
+
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as u32;
-    let body = payer_wallet.create_external_body(now + 180, seqno.try_into()?, transfer_cells)?;
+    let body = payer_wallet.create_external_body(now + 60, seqno.try_into()?, transfer_cells)?;
     let signed = payer_wallet.sign_external_body(&body)?;
-    let wrapped = payer_wallet.wrap_signed_body(signed, true)?;
+    let wrapped = payer_wallet.wrap_signed_body(signed, false)?;
     let boc = BagOfCells::from_root(wrapped);
     let tx = boc.serialize(true)?;
 

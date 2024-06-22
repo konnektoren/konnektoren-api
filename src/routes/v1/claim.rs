@@ -14,7 +14,7 @@ pub struct ClaimRequest {
     #[serde(rename = "type")]
     #[schema(example = "claim")]
     pub request_type: String,
-    #[schema(example = "EQBcofB8fWf9JoFqcxN3tkBOhXJldhZ2YmpL1v2mUikxGXO8")]
+    #[schema(example = "0QB-_k5Rule-nKr6HWPIlkDyHb1xhDdbI77q7uwAFqmUmKjP")]
     pub address: String,
     #[schema(example = 1)]
     pub amount: u32,

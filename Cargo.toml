@@ -13,12 +13,13 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0.86"
 axum = "0.7"
+base64 = "0.22.1"
 log = "0.4.21"
 num-bigint = "0.4.5"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tonlib = { git= "https://github.com/chriamue/tonlib-rs", version = "0.15.1", branch = "chriamue-patch-1" }
+tonlib = { git = "https://github.com/chriamue/tonlib-rs", version = "0.15.1", branch = "chriamue-patch-1" }
 tower = "0.4"
 utoipa = { version = "4.2.3", features = ["axum_extras"], optional = true }
 utoipa-swagger-ui = { version = "5", features = ["axum"], optional = true }

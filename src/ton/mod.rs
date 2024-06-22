@@ -5,9 +5,11 @@ use tonlib::contract::JettonMasterContract;
 use tonlib::contract::TonContractFactory;
 use tonlib::mnemonic::{KeyPair, Mnemonic};
 
+mod claim;
 mod client;
 mod transfer;
 
+pub use claim::send_jetton;
 pub use client::create_testnet_client;
 pub use transfer::transfer_jetton_token;
 
