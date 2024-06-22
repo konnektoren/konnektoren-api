@@ -9,7 +9,7 @@ mod claim;
 mod client;
 mod transfer;
 
-pub use claim::send_jetton;
+pub use claim::{generate_signed_message, send_jetton};
 pub use client::create_testnet_client;
 pub use transfer::transfer_jetton_token;
 
