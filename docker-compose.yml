@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
+      - RUST_LOG=${LOG_LEVEL}
       - MNEMONIC=${MNEMONIC}
       - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
       - FAUCET_ADDRESS=${FAUCET_ADDRESS}
