@@ -19,7 +19,7 @@ num-bigint = "0.4.5"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tonlib = { git = "https://github.com/chriamue/tonlib-rs", version = "0.15.1", branch = "chriamue-patch-1" }
+tonlib = { git = "https://github.com/ston-fi/tonlib-rs.git", optional = true }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors"] }
 utoipa = { version = "4.2.3", features = ["axum_extras"], optional = true }
@@ -31,3 +31,4 @@ uuid = { version = "1.8.0", features = ["v4"] }
 [features]
 default = ["openapi"]
 openapi = ["utoipa", "utoipa-swagger-ui"]
+ton = ["tonlib"]

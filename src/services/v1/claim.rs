@@ -2,8 +2,10 @@ use crate::routes::v1::claim::ClaimRequest;
 use axum::{http::StatusCode, Json};
 use std::env;
 
+#[cfg(feature = "ton")]
 use crate::ton::{create_key_pair, create_testnet_client, send_jetton, transfer_jetton_token};
 
+#[cfg(feature = "ton")]
 pub async fn claim_tokens_service(
     payload: ClaimRequest,
 ) -> Result<Json<&'static str>, (StatusCode, String)> {

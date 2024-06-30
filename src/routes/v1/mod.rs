@@ -3,5 +3,10 @@ use axum::{routing::post, Router};
 pub mod claim;
 
 pub fn create_router() -> Router {
-    Router::new().route("/claim", post(claim::claim_tokens))
+    let router = Router::new();
+
+    #[cfg(feature = "ton")]
+    let router = router.route("/claim", post(claim::claim_tokens));
+
+    router
 }

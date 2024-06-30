@@ -3,8 +3,10 @@ use axum::{http::StatusCode, Json};
 use base64::prelude::*;
 use std::env;
 
+#[cfg(feature = "ton")]
 use crate::ton::{create_key_pair, create_testnet_client, generate_signed_message};
 
+#[cfg(feature = "ton")]
 pub async fn claim_tokens_service(
     payload: ClaimV2Request,
 ) -> Result<Json<ClaimV2Response>, (StatusCode, String)> {

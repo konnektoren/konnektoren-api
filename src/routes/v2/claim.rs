@@ -2,6 +2,7 @@ use axum::extract::Json;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+#[cfg(feature = "ton")]
 use crate::services::v2::claim::claim_tokens_service;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -30,6 +31,7 @@ pub struct ClaimV2Response {
     pub destination: String,
 }
 
+#[cfg(feature = "ton")]
 #[utoipa::path(
     post,
     operation_id = "claim_v2",
