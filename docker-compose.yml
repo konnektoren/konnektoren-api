@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - MNEMONIC=${MNEMONIC}
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
+      - FAUCET_ADDRESS=${FAUCET_ADDRESS}
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  telegram_bot:
+    profiles:
+      - telegram
+    image: konnektoren-telegram-bot
+    environment:
+      - TELOXIDE_TOKEN=${TELOXIDE_TOKEN}
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  cloudflared:
+    profiles:
+      - cloudflare
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    environment:
+      - CF_TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+    depends_on:
+      - server
