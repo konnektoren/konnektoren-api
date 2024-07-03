@@ -1,9 +1,12 @@
 use crate::services::v1::profile::{fetch_profile, save_profile};
-use axum::extract::Path;
-use axum::Json;
+use crate::storage::{ProfileRepository, RepositoryError};
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::{Extension, Json};
 use konnektoren_core::prelude::PlayerProfile;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::Arc;
 use utoipa::ToSchema;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
@@ -33,14 +36,12 @@ fn profile_example() -> PlayerProfile {
     )
 )]
 pub async fn get_profile(
+    State(repo): State<Arc<dyn ProfileRepository>>,
     Path(profile_id): Path<String>,
-) -> Result<Json<ProfileV1Response>, (axum::http::StatusCode, String)> {
-    let profile = fetch_profile(profile_id).await.map_err(|err| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            err.to_string(),
-        )
-    })?;
+) -> Result<Json<ProfileV1Response>, (StatusCode, String)> {
+    let profile = fetch_profile(profile_id, repo)
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(Json(ProfileV1Response {
         profile: Some(profile),
     }))
@@ -59,13 +60,11 @@ pub async fn get_profile(
     )
 )]
 pub async fn post_profile(
+    State(repo): State<Arc<dyn ProfileRepository>>,
     Json(profile): Json<PlayerProfile>,
-) -> Result<Json<PlayerProfile>, (axum::http::StatusCode, String)> {
-    let profile = save_profile(profile).await.map_err(|err| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            err.to_string(),
-        )
-    })?;
+) -> Result<Json<PlayerProfile>, (StatusCode, String)> {
+    let profile = save_profile(profile, repo)
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(Json(profile))
 }

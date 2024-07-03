@@ -54,6 +54,7 @@ mod tests {
     fn api_doc_contains_all_endpoints() {
         let api_doc = ApiDoc::openapi();
         let paths = api_doc.paths.paths;
-        assert!(paths.contains_key("/"));
+        assert!(paths.contains_key("/api/v1/profiles/{profile_id}"));
+        assert!(paths.contains_key("/api/v1/profiles"));
     }
 }
