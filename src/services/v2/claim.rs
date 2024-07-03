@@ -1,7 +1,5 @@
 use crate::routes::v2::claim::{ClaimV2Request, ClaimV2Response};
 use axum::{http::StatusCode, Json};
-use base64::prelude::*;
-use std::env;
 
 #[cfg(feature = "ton")]
 use crate::ton::{create_key_pair, create_testnet_client, generate_signed_message};

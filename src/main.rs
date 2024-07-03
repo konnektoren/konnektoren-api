@@ -1,11 +1,11 @@
-use axum::handler::Handler;
 use axum::Router;
 use dotenv::dotenv;
 use konnektoren_api::routes;
-use konnektoren_api::storage::{ProfileRepository, RedisStorage};
+use konnektoren_api::storage::ProfileRepository;
 use routes::openapi::ApiDoc;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -15,8 +15,14 @@ async fn main() {
     pretty_env_logger::init();
     dotenv().ok();
 
-    // Create RedisProfileRepository
-    let repo: Arc<dyn ProfileRepository> = Arc::new(RedisStorage::new("redis://127.0.0.1/"));
+    #[cfg(feature = "redis")]
+    let repo: Arc<Mutex<dyn ProfileRepository>> = Arc::new(Mutex::new(
+        konnektoren_api::storage::RedisStorage::new("redis://127.0.0.1/"),
+    ));
+
+    #[cfg(not(feature = "redis"))]
+    let repo: Arc<Mutex<dyn ProfileRepository>> =
+        Arc::new(Mutex::new(konnektoren_api::storage::MemoryRepository::new()));
 
     let app = Router::new()
         .nest("/api/v1", routes::v1::create_router())

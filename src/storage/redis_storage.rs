@@ -31,7 +31,7 @@ impl ProfileRepository for RedisStorage {
         Ok(profile)
     }
 
-    async fn save(&self, profile: PlayerProfile) -> Result<PlayerProfile, RepositoryError> {
+    async fn save(&mut self, profile: PlayerProfile) -> Result<PlayerProfile, RepositoryError> {
         let mut connection = self
             .client
             .get_multiplexed_async_connection()

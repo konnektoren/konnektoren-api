@@ -2,32 +2,34 @@ use crate::storage::ProfileRepository;
 use anyhow::Error;
 use konnektoren_core::prelude::PlayerProfile;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub async fn fetch_profile(
     profile_id: String,
-    repository: Arc<dyn ProfileRepository>,
+    repository: Arc<Mutex<dyn ProfileRepository>>,
 ) -> Result<PlayerProfile, Error> {
-    let profile = repository.fetch(profile_id).await.map_err(|err| {
-        log::error!("Error fetching profile: {:?}", err);
-        err
-    })?;
+    let profile = repository
+        .lock()
+        .await
+        .fetch(profile_id)
+        .await
+        .map_err(|err| {
+            log::error!("Error fetching profile: {:?}", err);
+            err
+        })?;
     log::info!("Returning profile: {:?}", profile);
     Ok(profile)
 }
 
 pub async fn save_profile(
     profile: PlayerProfile,
-    repository: Arc<dyn ProfileRepository>,
+    repository: Arc<Mutex<dyn ProfileRepository>>,
 ) -> Result<PlayerProfile, Error> {
     log::info!("Received profile: {:?}", profile);
-    let saved_profile = repository
-        .save(profile)
-        .await
-        .map_err(|err| {
-            log::error!("Error saving profile: {:?}", err);
-            err
-        })?
-        .clone();
+    let saved_profile = repository.lock().await.save(profile).await.map_err(|err| {
+        log::error!("Error saving profile: {:?}", err);
+        err
+    })?;
     log::info!("Saved profile: {:?}", saved_profile);
     Ok(saved_profile)
 }
@@ -47,7 +49,7 @@ mod tests {
         #[async_trait]
         impl ProfileRepository for ProfileRepository {
             async fn fetch(&self, profile_id: String) -> Result<PlayerProfile, RepositoryError>;
-            async fn save(&self, profile: PlayerProfile) -> Result<PlayerProfile, RepositoryError>;
+            async fn save(&mut self, profile: PlayerProfile) -> Result<PlayerProfile, RepositoryError>;
         }
     }
 
@@ -58,7 +60,7 @@ mod tests {
             .with(eq("example_user_id".to_string()))
             .times(1)
             .returning(|_| Ok(PlayerProfile::new("example_user_id".to_string())));
-        let profile = fetch_profile("example_user_id".to_string(), Arc::new(mock))
+        let profile = fetch_profile("example_user_id".to_string(), Arc::new(Mutex::new(mock)))
             .await
             .unwrap();
         assert_eq!(profile.id, "example_user_id");
@@ -72,7 +74,9 @@ mod tests {
             .times(1)
             .returning(|profile| Ok(profile));
         let profile = PlayerProfile::new("example_user_id".to_string());
-        let saved_profile = save_profile(profile, Arc::new(mock)).await.unwrap();
+        let saved_profile = save_profile(profile, Arc::new(Mutex::new(mock)))
+            .await
+            .unwrap();
         assert_eq!(saved_profile.id, "example_user_id");
     }
 }
