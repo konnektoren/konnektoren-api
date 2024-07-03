@@ -10,6 +10,9 @@ services:
       - MNEMONIC=${MNEMONIC}
       - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
       - FAUCET_ADDRESS=${FAUCET_ADDRESS}
+      - REDIS_URL=redis://redis:6379
+    #ports:
+    #  - "3000:3000"
     env_file:
       - .env
     restart: unless-stopped
@@ -23,6 +26,12 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    volumes:
+      - ./redis-data:/data
 
   cloudflared:
     profiles:

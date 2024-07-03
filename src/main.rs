@@ -16,9 +16,12 @@ async fn main() {
     dotenv().ok();
 
     #[cfg(feature = "redis")]
-    let repo: Arc<Mutex<dyn ProfileRepository>> = Arc::new(Mutex::new(
-        konnektoren_api::storage::RedisStorage::new("redis://127.0.0.1/"),
-    ));
+    let repo: Arc<Mutex<dyn ProfileRepository>> = {
+        let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL env must be set");
+        Arc::new(Mutex::new(konnektoren_api::storage::RedisStorage::new(
+            &redis_url,
+        )))
+    };
 
     #[cfg(not(feature = "redis"))]
     let repo: Arc<Mutex<dyn ProfileRepository>> =
