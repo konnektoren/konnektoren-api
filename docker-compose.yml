@@ -23,6 +23,8 @@ services:
     image: konnektoren-telegram-bot
     environment:
       - TELOXIDE_TOKEN=${TELOXIDE_TOKEN}
+      - REDIS_URL=redis://redis:6379
+      - RUST_LOG=${LOG_LEVEL}
     env_file:
       - .env
     restart: unless-stopped
