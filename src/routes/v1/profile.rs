@@ -1,4 +1,4 @@
-use crate::services::v1::profile::{fetch_profile, save_profile};
+use crate::services::v1::profile::{fetch_all_profiles, fetch_profile, save_profile};
 use crate::storage::{ProfileRepository, RepositoryError};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -13,6 +13,12 @@ use utoipa::ToSchema;
 pub struct ProfileV1Response {
     #[schema()]
     pub profile: Option<PlayerProfile>,
+}
+
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct ProfilesV1Response {
+    #[schema()]
+    pub profiles: Vec<PlayerProfile>,
 }
 
 pub type ProfileV1Request = PlayerProfile;
@@ -45,6 +51,26 @@ pub async fn get_profile(
     Ok(Json(ProfileV1Response {
         profile: Some(profile),
     }))
+}
+
+#[utoipa::path(
+    get,
+    operation_id = "get_all_profiles_v1",
+    tag = "profile_v1",
+    path = "/profiles",
+    context_path = "/api/v1",
+    responses(
+        (status = 200, description = "Profiles loaded successfully", body = Vec<ProfileV1Response>),
+        (status = 400, description = "Invalid request data"),
+    )
+)]
+pub async fn get_all_profiles(
+    State(repo): State<Arc<Mutex<dyn ProfileRepository>>>,
+) -> Result<Json<ProfilesV1Response>, (StatusCode, String)> {
+    let profiles = fetch_all_profiles(repo)
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    Ok(Json(ProfilesV1Response { profiles }))
 }
 
 #[utoipa::path(

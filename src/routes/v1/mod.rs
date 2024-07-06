@@ -12,6 +12,7 @@ pub fn create_router() -> Router<Arc<Mutex<dyn ProfileRepository>>> {
     let router = Router::new();
 
     let router = router.route("/profiles/:profile_id", get(profile::get_profile));
+    let router = router.route("/profiles", get(profile::get_all_profiles));
     let router = router.route("/profiles", post(profile::post_profile));
 
     #[cfg(feature = "ton")]

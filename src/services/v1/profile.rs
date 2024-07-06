@@ -21,6 +21,17 @@ pub async fn fetch_profile(
     Ok(profile)
 }
 
+pub async fn fetch_all_profiles(
+    repository: Arc<Mutex<dyn ProfileRepository>>,
+) -> Result<Vec<PlayerProfile>, Error> {
+    let profiles = repository.lock().await.fetch_all().await.map_err(|err| {
+        log::error!("Error fetching profiles: {:?}", err);
+        err
+    })?;
+    log::info!("Returning profiles: {:?}", profiles);
+    Ok(profiles)
+}
+
 pub async fn save_profile(
     profile: PlayerProfile,
     repository: Arc<Mutex<dyn ProfileRepository>>,
