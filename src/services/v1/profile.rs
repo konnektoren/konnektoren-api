@@ -49,6 +49,7 @@ mod tests {
         #[async_trait]
         impl ProfileRepository for ProfileRepository {
             async fn fetch(&self, profile_id: String) -> Result<PlayerProfile, RepositoryError>;
+            async fn fetch_all(&self) -> Result<Vec<PlayerProfile>, RepositoryError>;
             async fn save(&mut self, profile: PlayerProfile) -> Result<PlayerProfile, RepositoryError>;
         }
     }
