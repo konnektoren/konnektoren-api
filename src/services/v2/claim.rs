@@ -1,8 +1,13 @@
+#[cfg(feature = "ton")]
 use crate::routes::v2::claim::{ClaimV2Request, ClaimV2Response};
-use axum::{http::StatusCode, Json};
-
 #[cfg(feature = "ton")]
 use crate::ton::{create_key_pair, create_testnet_client, generate_signed_message};
+#[cfg(feature = "ton")]
+use axum::http::StatusCode;
+use axum::Json;
+use base64::prelude::BASE64_STANDARD;
+use base64::Engine;
+use std::env;
 
 #[cfg(feature = "ton")]
 pub async fn claim_tokens_service(

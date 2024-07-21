@@ -1,5 +1,5 @@
 use crate::services::v1::profile::{fetch_all_profiles, fetch_profile, save_profile};
-use crate::storage::{ProfileRepository, RepositoryError};
+use crate::storage::Storage;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
@@ -42,10 +42,10 @@ fn profile_example() -> PlayerProfile {
     )
 )]
 pub async fn get_profile(
-    State(repo): State<Arc<Mutex<dyn ProfileRepository>>>,
+    State(repository): State<Arc<Mutex<dyn Storage>>>,
     Path(profile_id): Path<String>,
 ) -> Result<Json<ProfileV1Response>, (StatusCode, String)> {
-    let profile = fetch_profile(profile_id, repo)
+    let profile = fetch_profile(profile_id, repository)
         .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(Json(ProfileV1Response {
@@ -65,9 +65,9 @@ pub async fn get_profile(
     )
 )]
 pub async fn get_all_profiles(
-    State(repo): State<Arc<Mutex<dyn ProfileRepository>>>,
+    State(repository): State<Arc<Mutex<dyn Storage>>>,
 ) -> Result<Json<ProfilesV1Response>, (StatusCode, String)> {
-    let profiles = fetch_all_profiles(repo)
+    let profiles = fetch_all_profiles(repository)
         .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(Json(ProfilesV1Response { profiles }))
@@ -86,10 +86,10 @@ pub async fn get_all_profiles(
     )
 )]
 pub async fn post_profile(
-    State(repo): State<Arc<Mutex<dyn ProfileRepository>>>,
+    State(repository): State<Arc<Mutex<dyn Storage>>>,
     Json(profile): Json<PlayerProfile>,
 ) -> Result<Json<PlayerProfile>, (StatusCode, String)> {
-    let profile = save_profile(profile, repo)
+    let profile = save_profile(profile, repository)
         .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(Json(profile))

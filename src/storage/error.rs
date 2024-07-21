@@ -4,6 +4,7 @@ use std::fmt;
 pub enum RepositoryError {
     NotFound,
     InternalError(String),
+    LimitReached(usize),
 }
 
 impl fmt::Display for RepositoryError {
@@ -11,6 +12,7 @@ impl fmt::Display for RepositoryError {
         match self {
             RepositoryError::NotFound => write!(f, "Resource not found"),
             RepositoryError::InternalError(err) => write!(f, "Internal error: {}", err),
+            RepositoryError::LimitReached(limit) => write!(f, "Limit reached: {}", limit),
         }
     }
 }

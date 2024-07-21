@@ -32,13 +32,16 @@ pub struct ApiDoc;
     paths(
         super::v1::profile::get_profile,
         super::v1::profile::get_all_profiles,
-        super::v1::profile::post_profile
+        super::v1::profile::post_profile,
+        super::v1::leaderboard::get_leaderboard,
+        super::v1::leaderboard::post_performance_record
     ),
 // Schema components for requests and responses used across the API.
     components(
         schemas(
             v1::profile::ProfileV1Response,
-            v1::profile::ProfilesV1Response
+            v1::profile::ProfilesV1Response,
+            v1::leaderboard::LeaderboardV1Response
         )
     ),
     tags(

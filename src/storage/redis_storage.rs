@@ -1,11 +1,17 @@
-use crate::storage::{ProfileRepository, RepositoryError};
+use crate::storage::leaderboard_repository::LeaderboardRepository;
+use crate::storage::{ProfileRepository, RepositoryError, Storage};
 use async_trait::async_trait;
+use konnektoren_core::challenges::PerformanceRecord;
 use konnektoren_core::prelude::PlayerProfile;
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 pub struct RedisStorage {
     client: redis::Client,
 }
 
-const PROFILES_HASH: &str = "profiles";
+const PROFILES_HSET: &str = "profiles";
+const PERFORMANCE_RECORDS_HSET: &str = "performance_records";
+const PERFORMANCE_RECORDS_LIMIT: usize = 10;
 
 impl RedisStorage {
     pub fn new(url: &str) -> Self {
@@ -14,6 +20,8 @@ impl RedisStorage {
         }
     }
 }
+
+impl Storage for RedisStorage {}
 
 #[async_trait]
 impl ProfileRepository for RedisStorage {
@@ -24,7 +32,7 @@ impl ProfileRepository for RedisStorage {
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
         let profile_json: String = redis::cmd("HGET")
-            .arg(PROFILES_HASH)
+            .arg(PROFILES_HSET)
             .arg(&profile_id)
             .query_async(&mut connection)
             .await
@@ -41,7 +49,7 @@ impl ProfileRepository for RedisStorage {
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
         let profiles_data: Vec<String> = redis::cmd("HVALS")
-            .arg(PROFILES_HASH)
+            .arg(PROFILES_HSET)
             .query_async(&mut connection)
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
@@ -63,12 +71,103 @@ impl ProfileRepository for RedisStorage {
         let profile_json = serde_json::to_string(&profile)
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
         redis::cmd("HSET")
-            .arg(PROFILES_HASH)
+            .arg(PROFILES_HSET)
             .arg(&profile.id)
             .arg(profile_json)
             .query_async(&mut connection)
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
         Ok(profile)
+    }
+}
+
+#[async_trait]
+impl LeaderboardRepository for RedisStorage {
+    async fn fetch_performance_records(&self) -> Result<Vec<PerformanceRecord>, RepositoryError> {
+        let mut connection = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+        let performance_records_data: Vec<String> = redis::cmd("HVALS")
+            .arg(PERFORMANCE_RECORDS_HSET)
+            .query_async(&mut connection)
+            .await
+            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+        let mut performance_records = Vec::new();
+        for performance_record_json in performance_records_data {
+            let performance_record: PerformanceRecord =
+                serde_json::from_str(&performance_record_json)
+                    .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+            performance_records.push(performance_record);
+        }
+        Ok(performance_records)
+    }
+
+    async fn add_performance_record(
+        &mut self,
+        performance_record: PerformanceRecord,
+    ) -> Result<PerformanceRecord, RepositoryError> {
+        let mut connection = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+        let performance_record_json = serde_json::to_string(&performance_record)
+            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+        let performance_records_count: usize = redis::cmd("HLEN")
+            .arg(PERFORMANCE_RECORDS_HSET)
+            .query_async(&mut connection)
+            .await
+            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+        if performance_records_count < PERFORMANCE_RECORDS_LIMIT {
+            let mut hasher = DefaultHasher::default();
+            performance_record.hash(&mut hasher);
+            let id = hasher.finish().to_string();
+
+            redis::cmd("HSET")
+                .arg(PERFORMANCE_RECORDS_HSET)
+                .arg(id)
+                .arg(performance_record_json)
+                .query_async(&mut connection)
+                .await
+                .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+            Ok(performance_record)
+        } else {
+            Err(RepositoryError::LimitReached(PERFORMANCE_RECORDS_LIMIT))
+        }
+    }
+
+    async fn remove_performance_record(
+        &mut self,
+        performance_record: PerformanceRecord,
+    ) -> Result<PerformanceRecord, RepositoryError> {
+        let mut hasher = DefaultHasher::default();
+        performance_record.hash(&mut hasher);
+        let id = hasher.finish().to_string();
+
+        let mut connection = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+
+        let performance_record_json: String = redis::cmd("HGET")
+            .arg(PERFORMANCE_RECORDS_HSET)
+            .arg(id.clone())
+            .query_async(&mut connection)
+            .await
+            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+        if performance_record_json.is_empty() {
+            return Err(RepositoryError::NotFound);
+        } else {
+            redis::cmd("HDEL")
+                .arg(PERFORMANCE_RECORDS_HSET)
+                .arg(id.clone())
+                .query_async(&mut connection)
+                .await
+                .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+            Ok(performance_record)
+        }
     }
 }

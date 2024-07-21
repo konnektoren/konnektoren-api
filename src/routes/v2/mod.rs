@@ -1,11 +1,11 @@
-use crate::storage::ProfileRepository;
+use crate::storage::{ProfileRepository, Storage};
 use axum::{routing::post, Router};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub mod claim;
 
-pub fn create_router() -> Router<Arc<Mutex<dyn ProfileRepository>>> {
+pub fn create_router() -> Router<Arc<Mutex<dyn Storage>>> {
     let router = Router::new();
 
     #[cfg(feature = "ton")]
