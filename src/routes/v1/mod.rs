@@ -24,6 +24,14 @@ pub fn create_router() -> Router<Arc<Mutex<dyn Storage>>> {
         "/performance-record",
         post(leaderboard::post_performance_record),
     );
+    let router = router.route(
+        "/leaderboard/:challenge_id",
+        get(leaderboard::get_challenge_leaderboard),
+    );
+    let router = router.route(
+        "/performance-record/:challenge_id",
+        post(leaderboard::post_challenge_performance_record),
+    );
 
     router
 }

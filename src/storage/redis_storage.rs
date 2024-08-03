@@ -83,14 +83,18 @@ impl ProfileRepository for RedisStorage {
 
 #[async_trait]
 impl LeaderboardRepository for RedisStorage {
-    async fn fetch_performance_records(&self) -> Result<Vec<PerformanceRecord>, RepositoryError> {
+    async fn fetch_performance_records(
+        &self,
+        namespace: &str,
+    ) -> Result<Vec<PerformanceRecord>, RepositoryError> {
+        let hset = format!("{}:{}", PERFORMANCE_RECORDS_HSET, namespace);
         let mut connection = self
             .client
             .get_multiplexed_async_connection()
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
         let performance_records_data: Vec<String> = redis::cmd("HVALS")
-            .arg(PERFORMANCE_RECORDS_HSET)
+            .arg(hset)
             .query_async(&mut connection)
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
@@ -106,8 +110,10 @@ impl LeaderboardRepository for RedisStorage {
 
     async fn add_performance_record(
         &mut self,
+        namespace: &str,
         performance_record: PerformanceRecord,
     ) -> Result<PerformanceRecord, RepositoryError> {
+        let hset = format!("{}:{}", PERFORMANCE_RECORDS_HSET, namespace);
         let mut connection = self
             .client
             .get_multiplexed_async_connection()
@@ -116,7 +122,7 @@ impl LeaderboardRepository for RedisStorage {
         let performance_record_json = serde_json::to_string(&performance_record)
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
         let performance_records_count: usize = redis::cmd("HLEN")
-            .arg(PERFORMANCE_RECORDS_HSET)
+            .arg(&hset)
             .query_async(&mut connection)
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
@@ -125,8 +131,8 @@ impl LeaderboardRepository for RedisStorage {
             performance_record.hash(&mut hasher);
             let id = hasher.finish().to_string();
 
-            redis::cmd("HSET")
-                .arg(PERFORMANCE_RECORDS_HSET)
+            redis::cmd("hset")
+                .arg(&hset)
                 .arg(id)
                 .arg(performance_record_json)
                 .query_async(&mut connection)
@@ -140,8 +146,10 @@ impl LeaderboardRepository for RedisStorage {
 
     async fn remove_performance_record(
         &mut self,
+        namespace: &str,
         performance_record: PerformanceRecord,
     ) -> Result<PerformanceRecord, RepositoryError> {
+        let hset = format!("{}:{}", PERFORMANCE_RECORDS_HSET, namespace);
         let mut hasher = DefaultHasher::default();
         performance_record.hash(&mut hasher);
         let id = hasher.finish().to_string();
@@ -153,7 +161,7 @@ impl LeaderboardRepository for RedisStorage {
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
 
         let performance_record_json: String = redis::cmd("HGET")
-            .arg(PERFORMANCE_RECORDS_HSET)
+            .arg(&hset)
             .arg(id.clone())
             .query_async(&mut connection)
             .await
@@ -162,7 +170,7 @@ impl LeaderboardRepository for RedisStorage {
             return Err(RepositoryError::NotFound);
         } else {
             redis::cmd("HDEL")
-                .arg(PERFORMANCE_RECORDS_HSET)
+                .arg(&hset)
                 .arg(id.clone())
                 .query_async(&mut connection)
                 .await

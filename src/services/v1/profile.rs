@@ -61,9 +61,9 @@ mod tests {
 
         #[async_trait]
         impl LeaderboardRepository for ProfileRepository {
-            async fn fetch_performance_records(&self) -> Result<Vec<PerformanceRecord>, RepositoryError>;
-            async fn add_performance_record(&mut self, performance_record: PerformanceRecord) -> Result<PerformanceRecord, RepositoryError>;
-            async fn remove_performance_record(&mut self, performance_record: PerformanceRecord) -> Result<PerformanceRecord, RepositoryError>;
+            async fn fetch_performance_records(&self, namespace: &str) -> Result<Vec<PerformanceRecord>, RepositoryError>;
+            async fn add_performance_record(&mut self, namespace: &str, performance_record: PerformanceRecord) -> Result<PerformanceRecord, RepositoryError>;
+            async fn remove_performance_record(&mut self, namespace: &str, performance_record: PerformanceRecord) -> Result<PerformanceRecord, RepositoryError>;
         }
 
         #[async_trait]

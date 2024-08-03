@@ -44,12 +44,16 @@ impl ProfileRepository for MemoryRepository {
 
 #[async_trait]
 impl LeaderboardRepository for MemoryRepository {
-    async fn fetch_performance_records(&self) -> Result<Vec<PerformanceRecord>, RepositoryError> {
+    async fn fetch_performance_records(
+        &self,
+        _namespace: &str,
+    ) -> Result<Vec<PerformanceRecord>, RepositoryError> {
         Ok(self.performance_records.clone())
     }
 
     async fn add_performance_record(
         &mut self,
+        _namespace: &str,
         performance_record: PerformanceRecord,
     ) -> Result<PerformanceRecord, RepositoryError> {
         if self.performance_records.len() < PERFORMANCE_RECORDS_LIMIT {
@@ -62,6 +66,7 @@ impl LeaderboardRepository for MemoryRepository {
 
     async fn remove_performance_record(
         &mut self,
+        _namespace: &str,
         performance_record: PerformanceRecord,
     ) -> Result<PerformanceRecord, RepositoryError> {
         let index = self

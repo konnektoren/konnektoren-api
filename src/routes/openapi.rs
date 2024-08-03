@@ -34,7 +34,9 @@ pub struct ApiDoc;
         super::v1::profile::get_all_profiles,
         super::v1::profile::post_profile,
         super::v1::leaderboard::get_leaderboard,
-        super::v1::leaderboard::post_performance_record
+        super::v1::leaderboard::get_challenge_leaderboard,
+        super::v1::leaderboard::post_performance_record,
+        super::v1::leaderboard::post_challenge_performance_record
     ),
 // Schema components for requests and responses used across the API.
     components(
