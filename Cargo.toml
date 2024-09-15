@@ -39,7 +39,7 @@ uuid = { version = "1.8.0", features = ["v4"] }
 mockall = "0.12.1"
 
 [features]
-default = ["openapi", "redis"]
+default = ["openapi"]
 openapi = ["utoipa", "utoipa-swagger-ui"]
 ton = ["tonlib"]
 redis = ["dep:redis"]
