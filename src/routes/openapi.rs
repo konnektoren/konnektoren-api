@@ -36,14 +36,19 @@ pub struct ApiDoc;
         super::v1::leaderboard::get_leaderboard,
         super::v1::leaderboard::get_challenge_leaderboard,
         super::v1::leaderboard::post_performance_record,
-        super::v1::leaderboard::post_challenge_performance_record
+        super::v1::leaderboard::post_challenge_performance_record,
+        super::v1::review::get_reviews,
+        super::v1::review::post_review,
+        super::v1::review::get_average_rating,
     ),
 // Schema components for requests and responses used across the API.
     components(
         schemas(
             v1::profile::ProfileV1Response,
             v1::profile::ProfilesV1Response,
-            v1::leaderboard::LeaderboardV1Response
+            v1::leaderboard::LeaderboardV1Response,
+            v1::review::Review,
+            v1::review::ReviewsResponse
         )
     ),
     tags(

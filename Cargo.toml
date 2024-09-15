@@ -29,7 +29,10 @@ utoipa = { version = "4.2.3", features = ["axum_extras"], optional = true }
 utoipa-swagger-ui = { version = "5", features = ["axum"], optional = true }
 dotenv = "0.15.0"
 pretty_env_logger = "0.5.0"
-redis = { version = "0.25.4", features = ["tokio-comp", "json"], optional = true }
+redis = { version = "0.25.4", features = [
+    "tokio-comp",
+    "json",
+], optional = true }
 uuid = { version = "1.8.0", features = ["v4"] }
 
 [dev-dependencies]

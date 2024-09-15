@@ -47,9 +47,11 @@ pub async fn save_profile(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::{LeaderboardRepository, ProfileRepository, RepositoryError};
+    use crate::storage::{
+        LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository,
+    };
     use async_trait::async_trait;
-    use konnektoren_core::challenges::PerformanceRecord;
+    use konnektoren_core::challenges::{PerformanceRecord, Review};
     use konnektoren_core::prelude::PlayerProfile;
     use mockall::predicate::*;
     use mockall::*;
@@ -71,6 +73,13 @@ mod tests {
             async fn fetch(&self, profile_id: String) -> Result<PlayerProfile, RepositoryError>;
             async fn fetch_all(&self) -> Result<Vec<PlayerProfile>, RepositoryError>;
             async fn save(&mut self, profile: PlayerProfile) -> Result<PlayerProfile, RepositoryError>;
+        }
+
+        #[async_trait]
+        impl ReviewRepository for ProfileRepository {
+            async fn store_review(&mut self, review: Review) -> Result<(), RepositoryError>;
+            async fn fetch_reviews(&self, namespace: &str) -> Result<Vec<Review>, RepositoryError>;
+            async fn fetch_average_rating(&self, namespace: &str) -> Result<f64, RepositoryError>;
         }
 
         #[async_trait]

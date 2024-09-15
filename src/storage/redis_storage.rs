@@ -1,8 +1,10 @@
-use crate::storage::leaderboard_repository::LeaderboardRepository;
-use crate::storage::{ProfileRepository, RepositoryError, Storage};
+use crate::storage::{
+    LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository, Storage,
+};
 use async_trait::async_trait;
-use konnektoren_core::challenges::PerformanceRecord;
+use konnektoren_core::challenges::{PerformanceRecord, Review};
 use konnektoren_core::prelude::PlayerProfile;
+use redis::AsyncCommands;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub struct RedisStorage {
@@ -11,6 +13,7 @@ pub struct RedisStorage {
 
 const PROFILES_HSET: &str = "profiles";
 const PERFORMANCE_RECORDS_HSET: &str = "performance_records";
+const REVIEWS_HSET: &str = "reviews";
 const PERFORMANCE_RECORDS_LIMIT: usize = 10;
 
 impl RedisStorage {
@@ -26,57 +29,50 @@ impl Storage for RedisStorage {}
 #[async_trait]
 impl ProfileRepository for RedisStorage {
     async fn fetch(&self, profile_id: String) -> Result<PlayerProfile, RepositoryError> {
-        let mut connection = self
+        let mut conn = self
             .client
             .get_multiplexed_async_connection()
             .await
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-        let profile_json: String = redis::cmd("HGET")
-            .arg(PROFILES_HSET)
-            .arg(&profile_id)
-            .query_async(&mut connection)
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let profile_json: String = conn
+            .hget(PROFILES_HSET, &profile_id)
             .await
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-        let profile: PlayerProfile = serde_json::from_str(&profile_json)
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-        Ok(profile)
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+        serde_json::from_str(&profile_json)
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))
     }
 
     async fn fetch_all(&self) -> Result<Vec<PlayerProfile>, RepositoryError> {
-        let mut connection = self
+        let mut conn = self
             .client
             .get_multiplexed_async_connection()
             .await
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-        let profiles_data: Vec<String> = redis::cmd("HVALS")
-            .arg(PROFILES_HSET)
-            .query_async(&mut connection)
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+        let profiles_data: Vec<String> = conn
+            .hvals(PROFILES_HSET)
             .await
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-        let mut profiles = Vec::new();
-        for profile_json in profiles_data {
-            let profile: PlayerProfile = serde_json::from_str(&profile_json)
-                .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-            profiles.push(profile);
-        }
-        Ok(profiles)
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+        profiles_data
+            .into_iter()
+            .map(|data| {
+                serde_json::from_str(&data)
+                    .map_err(|e| RepositoryError::InternalError(e.to_string()))
+            })
+            .collect()
     }
 
     async fn save(&mut self, profile: PlayerProfile) -> Result<PlayerProfile, RepositoryError> {
-        let mut connection = self
+        let mut conn = self
             .client
             .get_multiplexed_async_connection()
             .await
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
         let profile_json = serde_json::to_string(&profile)
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-        redis::cmd("HSET")
-            .arg(PROFILES_HSET)
-            .arg(&profile.id)
-            .arg(profile_json)
-            .query_async(&mut connection)
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+        conn.hset(PROFILES_HSET, &profile.id, &profile_json)
             .await
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
         Ok(profile)
     }
 }
@@ -176,6 +172,62 @@ impl LeaderboardRepository for RedisStorage {
                 .await
                 .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
             Ok(performance_record)
+        }
+    }
+}
+
+#[async_trait]
+impl ReviewRepository for RedisStorage {
+    async fn store_review(&mut self, review: Review) -> Result<(), RepositoryError> {
+        let ns_key = format!("{}:{}", REVIEWS_HSET, review.challenge_id);
+        let review_json = serde_json::to_string(&review)
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let mut conn = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let _: () = conn
+            .rpush::<&str, _, ()>(&ns_key, &review_json)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    async fn fetch_reviews(&self, namespace: &str) -> Result<Vec<Review>, RepositoryError> {
+        let ns_key = format!("{}:{}", REVIEWS_HSET, namespace);
+        let mut conn = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let review_jsons: Vec<String> = conn
+            .lrange(&ns_key, 0, -1)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        review_jsons
+            .iter()
+            .map(|json| {
+                serde_json::from_str::<Review>(json)
+                    .map_err(|e| RepositoryError::InternalError(e.to_string()))
+            })
+            .collect()
+    }
+
+    async fn fetch_average_rating(&self, namespace: &str) -> Result<f64, RepositoryError> {
+        let reviews = self.fetch_reviews(namespace).await?;
+
+        if reviews.is_empty() {
+            Ok(0.0)
+        } else {
+            let total: u32 = reviews.iter().map(|r| r.rating as u32).sum();
+            let avg_rating = total as f64 / reviews.len() as f64;
+            Ok(avg_rating)
         }
     }
 }
