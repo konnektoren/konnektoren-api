@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 pub mod claim;
 pub mod leaderboard;
 pub mod profile;
+pub mod review;
 
 pub fn create_router() -> Router<Arc<Mutex<dyn Storage>>> {
     let router = Router::new();
@@ -32,6 +33,12 @@ pub fn create_router() -> Router<Arc<Mutex<dyn Storage>>> {
         "/performance-record/:challenge_id",
         post(leaderboard::post_challenge_performance_record),
     );
+    let router = router.route(
+        "/reviews/:challenge_id/average",
+        get(review::get_average_rating),
+    );
+    let router = router.route("/reviews/:challenge_id", get(review::get_reviews));
+    let router = router.route("/reviews", post(review::post_review));
 
     router
 }
