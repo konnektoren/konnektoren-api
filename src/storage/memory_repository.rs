@@ -5,6 +5,10 @@ use async_trait::async_trait;
 use konnektoren_core::challenges::{PerformanceRecord, Review};
 use konnektoren_core::prelude::PlayerProfile;
 use std::collections::HashMap;
+use yew_chat::prelude::{Message, MessageReceiver, MessageSender, ReceiveError, SendError};
+#[cfg(feature = "chat")]
+use yew_chat::server::MemoryMessageStorage;
+use yew_chat::server::MessageStorage;
 
 const PERFORMANCE_RECORDS_LIMIT: usize = 10;
 
@@ -12,6 +16,8 @@ pub struct MemoryRepository {
     profiles: HashMap<String, PlayerProfile>,
     performance_records: Vec<PerformanceRecord>,
     reviews: HashMap<String, Vec<Review>>,
+    #[cfg(feature = "chat")]
+    message_storage: MemoryMessageStorage,
 }
 
 impl MemoryRepository {
@@ -20,6 +26,8 @@ impl MemoryRepository {
             profiles: HashMap::new(),
             performance_records: Vec::new(),
             reviews: HashMap::new(),
+            #[cfg(feature = "chat")]
+            message_storage: MemoryMessageStorage::new(),
         }
     }
 }
@@ -121,6 +129,25 @@ impl ReviewRepository for MemoryRepository {
         })
     }
 }
+
+#[cfg(feature = "chat")]
+#[async_trait]
+impl MessageReceiver for MemoryRepository {
+    async fn receive_messages(&self, channel: &str) -> Result<Vec<Message>, ReceiveError> {
+        self.message_storage.receive_messages(channel).await
+    }
+}
+
+#[cfg(feature = "chat")]
+#[async_trait]
+impl MessageSender for MemoryRepository {
+    async fn send_message(&self, channel: &str, message: Message) -> Result<(), SendError> {
+        self.message_storage.send_message(channel, message).await
+    }
+}
+
+#[cfg(feature = "chat")]
+impl MessageStorage for MemoryRepository {}
 
 #[cfg(test)]
 mod tests {
