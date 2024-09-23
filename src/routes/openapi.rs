@@ -40,6 +40,11 @@ pub struct ApiDoc;
         super::v1::review::get_reviews,
         super::v1::review::post_review,
         super::v1::review::get_average_rating,
+        #[cfg(feature = "chat")]
+        super::v1::chat::send_message,
+        #[cfg(feature = "chat")]
+        super::v1::chat::receive_messages,
+
     ),
 // Schema components for requests and responses used across the API.
     components(
@@ -48,7 +53,7 @@ pub struct ApiDoc;
             v1::profile::ProfilesV1Response,
             v1::leaderboard::LeaderboardV1Response,
             v1::review::Review,
-            v1::review::ReviewsResponse
+            v1::review::ReviewsResponse,
         )
     ),
     tags(
@@ -68,5 +73,11 @@ mod tests {
         let paths = api_doc.paths.paths;
         assert!(paths.contains_key("/api/v1/profiles/{profile_id}"));
         assert!(paths.contains_key("/api/v1/profiles"));
+
+        #[cfg(feature = "chat")]
+        {
+            assert!(paths.contains_key("/api/v1/chat/send/{channel}"));
+            assert!(paths.contains_key("/api/v1/chat/receive/{channel}"));
+        }
     }
 }

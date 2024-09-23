@@ -22,11 +22,11 @@ num-bigint = "0.4.5"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tonlib = { git = "https://github.com/ston-fi/tonlib-rs.git", optional = true }
+tonlib = { version = "0.17", optional = true }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors"] }
-utoipa = { version = "4.2.3", features = ["axum_extras"], optional = true }
-utoipa-swagger-ui = { version = "5", features = ["axum"], optional = true }
+utoipa = { version = "4.2", features = ["axum_extras"], optional = true }
+utoipa-swagger-ui = { version = "7", features = ["axum"], optional = true }
 dotenv = "0.15.0"
 pretty_env_logger = "0.5.0"
 redis = { version = "0.25.4", features = [
@@ -34,12 +34,14 @@ redis = { version = "0.25.4", features = [
     "json",
 ], optional = true }
 uuid = { version = "1.8.0", features = ["v4"] }
+yew-chat = { git="https://github.com/chriamue/yew-chat", features = ["server"], default-features = false, optional = true }
 
 [dev-dependencies]
 mockall = "0.12.1"
 
 [features]
-default = ["openapi"]
+default = ["openapi", "chat"]
 openapi = ["utoipa", "utoipa-swagger-ui"]
 ton = ["tonlib"]
 redis = ["dep:redis"]
+chat = ["yew-chat"]

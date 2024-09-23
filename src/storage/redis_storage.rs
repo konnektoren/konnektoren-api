@@ -6,6 +6,8 @@ use konnektoren_core::challenges::{PerformanceRecord, Review};
 use konnektoren_core::prelude::PlayerProfile;
 use redis::AsyncCommands;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use yew_chat::prelude::{Message, MessageReceiver, MessageSender, ReceiveError, SendError};
+use yew_chat::server::MessageStorage;
 
 pub struct RedisStorage {
     client: redis::Client,
@@ -13,8 +15,11 @@ pub struct RedisStorage {
 
 const PROFILES_HSET: &str = "profiles";
 const PERFORMANCE_RECORDS_HSET: &str = "performance_records";
-const REVIEWS_HSET: &str = "reviews";
 const PERFORMANCE_RECORDS_LIMIT: usize = 10;
+
+const REVIEWS_HSET: &str = "reviews";
+
+const CHAT_MESSAGES_HSET: &str = "chat_messages";
 
 impl RedisStorage {
     pub fn new(url: &str) -> Self {
@@ -231,3 +236,53 @@ impl ReviewRepository for RedisStorage {
         }
     }
 }
+
+#[cfg(feature = "chat")]
+impl MessageReceiver for RedisStorage {
+    async fn receive_messages(&self, channel: &str) -> Result<Vec<Message>, ReceiveError> {
+        let hset = format!("{}:{}", CHAT_MESSAGES_HSET, channel);
+        let mut connection = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|err| ReceiveError::InternalError(err.to_string()))?;
+        let messages_data: Vec<String> = redis::cmd("HVALS")
+            .arg(hset)
+            .query_async(&mut connection)
+            .await
+            .map_err(|err| ReceiveError::InternalError(err.to_string()))?;
+        let mut messages = Vec::new();
+        for message_json in messages_data {
+            let message: Message = serde_json::from_str(&message_json)
+                .map_err(|err| ReceiveError::InternalError(err.to_string()))?;
+            messages.push(message);
+        }
+        Ok(messages)
+    }
+}
+
+#[cfg(feature = "chat")]
+impl MessageSender for RedisStorage {
+    async fn send_message(&self, channel: &str, message: Message) -> Result<(), SendError> {
+        let hset = format!("{}:{}", CHAT_MESSAGES_HSET, channel);
+        let key = format!("{}:{}", message.sender, message.timestamp);
+        let message_json = serde_json::to_string(&message)
+            .map_err(|err| SendError::InternalError(err.to_string()))?;
+        let mut connection = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|err| SendError::InternalError(err.to_string()))?;
+        redis::cmd("hset")
+            .arg(hset)
+            .arg(key)
+            .arg(message_json)
+            .query_async(&mut connection)
+            .await
+            .map_err(|err| SendError::InternalError(err.to_string()))?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "chat")]
+impl MessageStorage for RedisStorage {}
