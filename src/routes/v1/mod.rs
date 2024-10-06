@@ -42,6 +42,7 @@ pub fn create_router() -> Router<Arc<Mutex<dyn Storage>>> {
     );
     let router = router.route("/reviews/:challenge_id", get(review::get_reviews));
     let router = router.route("/reviews", post(review::post_review));
+    let router = router.route("/reviews", get(review::get_all_reviews));
 
     #[cfg(feature = "chat")]
     let router = router.route("/chat/send/:channel", post(chat::send_message));

@@ -6,5 +6,6 @@ use konnektoren_core::challenges::Review;
 pub trait ReviewRepository: Send + Sync {
     async fn store_review(&mut self, review: Review) -> Result<(), RepositoryError>;
     async fn fetch_reviews(&self, namespace: &str) -> Result<Vec<Review>, RepositoryError>;
+    async fn fetch_all_reviews(&self) -> Result<Vec<Review>, RepositoryError>;
     async fn fetch_average_rating(&self, namespace: &str) -> Result<f64, RepositoryError>;
 }

@@ -39,6 +39,7 @@ pub struct ApiDoc;
         super::v1::leaderboard::post_challenge_performance_record,
         super::v1::review::get_reviews,
         super::v1::review::post_review,
+        super::v1::review::get_all_reviews,
         super::v1::review::get_average_rating,
         #[cfg(feature = "chat")]
         super::v1::chat::send_message,

@@ -125,3 +125,25 @@ pub async fn post_review(
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(Json(review))
 }
+
+#[utoipa::path(
+    get,
+    operation_id = "get_all_reviews",
+    tag = "review",
+    path = "/reviews",
+    context_path = "/api/v1",
+    responses(
+        (status = 200, description = "Reviews loaded successfully", body = ReviewsResponse),
+        (status = 400, description = "Invalid request data"),
+        (status = 500, description = "Internal server error"),
+    )
+)]
+pub async fn get_all_reviews(
+    State(repository): State<Arc<Mutex<dyn Storage>>>,
+) -> Result<Json<ReviewsResponse>, (StatusCode, String)> {
+    let reviews = crate::services::v1::review::fetch_all_reviews(repository)
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    let reviews: Vec<Review> = reviews.into_iter().map(|r| r.into()).collect();
+    Ok(Json(ReviewsResponse { reviews }))
+}

@@ -29,6 +29,20 @@ pub async fn fetch_reviews(
     Ok(reviews)
 }
 
+pub async fn fetch_all_reviews(repository: Arc<Mutex<dyn Storage>>) -> Result<Vec<Review>, Error> {
+    let reviews = repository
+        .lock()
+        .await
+        .fetch_all_reviews()
+        .await
+        .map_err(|err| {
+            log::error!("Error fetching all reviews: {:?}", err);
+            err
+        })?;
+    log::debug!("Returning all reviews: {:?}", reviews);
+    Ok(reviews)
+}
+
 pub async fn fetch_average_rating(
     challenge_id: String,
     repository: Arc<Mutex<dyn Storage>>,

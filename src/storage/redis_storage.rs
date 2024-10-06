@@ -235,6 +235,27 @@ impl ReviewRepository for RedisStorage {
             Ok(avg_rating)
         }
     }
+
+    async fn fetch_all_reviews(&self) -> Result<Vec<Review>, RepositoryError> {
+        let mut conn = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let review_jsons: Vec<String> = conn
+            .hvals(REVIEWS_HSET)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        review_jsons
+            .iter()
+            .map(|json| {
+                serde_json::from_str::<Review>(json)
+                    .map_err(|e| RepositoryError::InternalError(e.to_string()))
+            })
+            .collect()
+    }
 }
 
 #[cfg(feature = "chat")]
