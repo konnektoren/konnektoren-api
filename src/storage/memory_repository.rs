@@ -128,6 +128,10 @@ impl ReviewRepository for MemoryRepository {
             0.0
         })
     }
+
+    async fn fetch_all_reviews(&self) -> Result<Vec<Review>, RepositoryError> {
+        Ok(self.reviews.values().flatten().cloned().collect())
+    }
 }
 
 #[cfg(feature = "chat")]

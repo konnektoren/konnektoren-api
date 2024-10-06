@@ -58,6 +58,12 @@ mod tests {
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
+    #[cfg(feature = "chat")]
+    use yew_chat::{
+        prelude::{Message, MessageReceiver, MessageSender, ReceiveError, SendError},
+        server::MessageStorage,
+    };
+
     mock! {
         pub ProfileRepository {}
 
@@ -79,8 +85,29 @@ mod tests {
         impl ReviewRepository for ProfileRepository {
             async fn store_review(&mut self, review: Review) -> Result<(), RepositoryError>;
             async fn fetch_reviews(&self, namespace: &str) -> Result<Vec<Review>, RepositoryError>;
+            async fn fetch_all_reviews(&self) -> Result<Vec<Review>, RepositoryError>;
             async fn fetch_average_rating(&self, namespace: &str) -> Result<f64, RepositoryError>;
         }
+
+
+        #[cfg(feature = "chat")]
+        #[async_trait]
+        impl MessageReceiver for ProfileRepository {
+            async fn receive_messages(&self, channel: &str) -> Result<Vec<Message>, ReceiveError> {
+                self.message_storage.receive_messages(channel).await
+            }
+        }
+
+        #[cfg(feature = "chat")]
+        #[async_trait]
+        impl MessageSender for ProfileRepository {
+            async fn send_message(&self, channel: &str, message: Message) -> Result<(), SendError> {
+                self.message_storage.send_message(channel, message).await
+            }
+        }
+
+        #[cfg(feature = "chat")]
+        impl MessageStorage for ProfileRepository {}
 
         #[async_trait]
         impl Storage for ProfileRepository {}
