@@ -1,10 +1,11 @@
-version: '3.8'
+version: "3.8"
 
 services:
   server:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ghcr.io/konnektoren/konnektoren-api:latest
     environment:
       - RUST_LOG=${LOG_LEVEL}
       - MNEMONIC=${MNEMONIC}
