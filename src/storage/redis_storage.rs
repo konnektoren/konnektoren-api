@@ -243,18 +243,20 @@ impl ReviewRepository for RedisStorage {
             .await
             .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
 
-        let review_jsons: Vec<String> = conn
-            .hvals(REVIEWS_HSET)
+        let review_keys: Vec<String> = conn
+            .keys(format!("{}:*", REVIEWS_HSET))
             .await
             .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
 
-        review_jsons
-            .iter()
-            .map(|json| {
-                serde_json::from_str::<Review>(json)
-                    .map_err(|e| RepositoryError::InternalError(e.to_string()))
-            })
-            .collect()
+        let mut all_reviews = Vec::new();
+
+        for key in review_keys {
+            let namespace = key.trim_start_matches(&format!("{}:", REVIEWS_HSET));
+            let reviews = self.fetch_reviews(namespace).await?;
+            all_reviews.extend(reviews);
+        }
+
+        Ok(all_reviews)
     }
 }
 
