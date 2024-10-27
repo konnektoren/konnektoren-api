@@ -34,7 +34,9 @@ redis = { version = "0.25.4", features = [
     "json",
 ], optional = true }
 uuid = { version = "1.8.0", features = ["v4"] }
-yew-chat = { git="https://github.com/chriamue/yew-chat", features = ["server"], default-features = false, optional = true }
+yew-chat = { git = "https://github.com/chriamue/yew-chat", features = [
+    "server",
+], default-features = false, optional = true }
 
 [dev-dependencies]
 mockall = "0.12.1"

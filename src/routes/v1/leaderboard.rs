@@ -20,7 +20,7 @@ fn performance_record_example() -> PerformanceRecord {
     PerformanceRecord {
         game_path_id: "example_game_path_id".to_string(),
         profile_name: "example_profile_name".to_string(),
-        challenges_performance: vec![("example_challenge_id".to_string(), 100)],
+        challenges_performance: vec![("example_challenge_id".to_string(), 100, 10000)],
         total_challenges: 1,
         performance_percentage: 100,
         date: Utc::now(),
