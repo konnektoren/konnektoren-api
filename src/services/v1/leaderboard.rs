@@ -6,24 +6,6 @@ use tokio::sync::Mutex;
 
 const PERFORMANCE_RECORDS_LIMIT: usize = 10;
 
-fn sort_performance_and_date(a: &PerformanceRecord, b: &PerformanceRecord) -> std::cmp::Ordering {
-    if a.performance_percentage == b.performance_percentage {
-        let a_elapsed = a.elapsed_time().unwrap_or(Duration::hours(1));
-        let b_elapsed = b.elapsed_time().unwrap_or(Duration::hours(1));
-
-        if a_elapsed == b_elapsed {
-            // If the time is the same, sort by date
-            b.date.cmp(&a.date)
-        } else {
-            // Otherwise, sort by time (shortest first)
-            a_elapsed.cmp(&b_elapsed)
-        }
-    } else {
-        // Otherwise, sort by performance percentage
-        b.performance_percentage.cmp(&a.performance_percentage)
-    }
-}
-
 pub async fn add_performance_record(
     namespace: &str,
     performance_record: PerformanceRecord,
@@ -37,7 +19,7 @@ pub async fn add_performance_record(
 
     if leaderboard.len() >= PERFORMANCE_RECORDS_LIMIT {
         // remove record with the lowest performance
-        leaderboard.sort_by(sort_performance_and_date);
+        leaderboard.sort();
 
         let record_to_remove = leaderboard.last().unwrap();
 
@@ -119,23 +101,14 @@ mod tests {
             total_challenges: 0,
         };
 
-        assert_eq!(sort_performance_and_date(&a, &b), std::cmp::Ordering::Less);
-        assert_eq!(
-            sort_performance_and_date(&a, &c),
-            std::cmp::Ordering::Greater
-        );
-        assert_eq!(sort_performance_and_date(&a, &d), std::cmp::Ordering::Less);
-        assert_eq!(
-            sort_performance_and_date(&b, &c),
-            std::cmp::Ordering::Greater
-        );
-        assert_eq!(
-            sort_performance_and_date(&b, &d),
-            std::cmp::Ordering::Greater
-        );
+        assert_eq!(a.cmp(&b), std::cmp::Ordering::Less);
+        assert_eq!(a.cmp(&c), std::cmp::Ordering::Greater);
+        assert_eq!(a.cmp(&d), std::cmp::Ordering::Less);
+        assert_eq!(b.cmp(&c), std::cmp::Ordering::Greater);
+        assert_eq!(b.cmp(&d), std::cmp::Ordering::Greater);
 
         let mut vec = vec![a.clone(), b.clone(), c.clone(), d.clone()];
-        vec.sort_by(sort_performance_and_date);
+        vec.sort();
         assert_eq!(vec, vec![c, a, d, b]);
     }
 }
