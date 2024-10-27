@@ -1,3 +1,4 @@
+use crate::compatibility::LegacyPerformanceRecord;
 use crate::storage::{
     LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository, Storage,
 };
@@ -101,10 +102,27 @@ impl LeaderboardRepository for RedisStorage {
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
         let mut performance_records = Vec::new();
         for performance_record_json in performance_records_data {
-            let performance_record: PerformanceRecord =
-                serde_json::from_str(&performance_record_json)
-                    .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-            performance_records.push(performance_record);
+            // Try to deserialize as PerformanceRecord first
+            if let Ok(performance_record) =
+                serde_json::from_str::<PerformanceRecord>(&performance_record_json)
+            {
+                performance_records.push(performance_record);
+                continue;
+            }
+
+            // If deserialization as PerformanceRecord fails, try LegacyPerformanceRecord
+            if let Ok(legacy_performance_record) =
+                serde_json::from_str::<LegacyPerformanceRecord>(&performance_record_json)
+            {
+                let performance_record: PerformanceRecord = legacy_performance_record.into();
+                performance_records.push(performance_record);
+                continue;
+            }
+
+            // If both deserializations fail, return an error
+            return Err(RepositoryError::InternalError(
+                "Invalid Performance Record format".to_string(),
+            ));
         }
         Ok(performance_records)
     }
