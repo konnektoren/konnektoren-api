@@ -53,7 +53,7 @@ mod tests {
         assert_eq!(performance_record.profile_name, "profile_name");
         assert_eq!(
             performance_record.challenges_performance,
-            vec![("challenge_id".to_string(), 100, 0)]
+            vec![("challenge_id".to_string(), 100, 3600000)]
         );
         assert_eq!(performance_record.total_challenges, 1);
         assert_eq!(performance_record.performance_percentage, 100);

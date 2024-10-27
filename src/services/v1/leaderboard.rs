@@ -1,5 +1,6 @@
 use crate::storage::{RepositoryError, Storage};
-use konnektoren_core::challenges::PerformanceRecord;
+use chrono::Duration;
+use konnektoren_core::challenges::{PerformanceRecord, Timed};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -7,8 +8,18 @@ const PERFORMANCE_RECORDS_LIMIT: usize = 10;
 
 fn sort_performance_and_date(a: &PerformanceRecord, b: &PerformanceRecord) -> std::cmp::Ordering {
     if a.performance_percentage == b.performance_percentage {
-        b.date.cmp(&a.date)
+        let a_elapsed = a.elapsed_time().unwrap_or(Duration::hours(1));
+        let b_elapsed = b.elapsed_time().unwrap_or(Duration::hours(1));
+
+        if a_elapsed == b_elapsed {
+            // If the time is the same, sort by date
+            b.date.cmp(&a.date)
+        } else {
+            // Otherwise, sort by time (shortest first)
+            a_elapsed.cmp(&b_elapsed)
+        }
     } else {
+        // Otherwise, sort by performance percentage
         b.performance_percentage.cmp(&a.performance_percentage)
     }
 }
