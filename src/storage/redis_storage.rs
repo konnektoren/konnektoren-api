@@ -1,6 +1,7 @@
 use crate::compatibility::LegacyPerformanceRecord;
 use crate::storage::{
     LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository, Storage,
+    WindowedCounterRepository,
 };
 use async_trait::async_trait;
 use konnektoren_core::challenges::{PerformanceRecord, Review};
@@ -21,6 +22,9 @@ const PERFORMANCE_RECORDS_LIMIT: usize = 10;
 const REVIEWS_HSET: &str = "reviews";
 
 const CHAT_MESSAGES_HSET: &str = "chat_messages";
+
+const USER_COUNTER_KEY: &str = "user_counter";
+const WINDOW_SECONDS: i64 = 24 * 60 * 60;
 
 impl RedisStorage {
     pub fn new(url: &str) -> Self {
@@ -329,3 +333,55 @@ impl MessageSender for RedisStorage {
 
 #[cfg(feature = "chat")]
 impl MessageStorage for RedisStorage {}
+
+#[async_trait]
+impl WindowedCounterRepository for RedisStorage {
+    async fn get_active_count(&self, namespace: &str) -> Result<u32, RepositoryError> {
+        let mut conn = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let key = format!("{}:{}", USER_COUNTER_KEY, namespace);
+        let count: u32 = conn
+            .zcount(&key, "-inf", "+inf")
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        Ok(count)
+    }
+
+    async fn record_presence(&mut self, namespace: &str) -> Result<u32, RepositoryError> {
+        let mut conn = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let key = format!("{}:{}", USER_COUNTER_KEY, namespace);
+        let timestamp = chrono::Utc::now().timestamp() as f64;
+
+        // Add presence with current timestamp
+        let _: () = conn
+            .zadd(&key, timestamp.to_string(), timestamp)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        // Remove old entries (older than 24 hours)
+        let min_timestamp = timestamp - WINDOW_SECONDS as f64;
+        let _: () = conn
+            .zrevrangebyscore(&key, "-inf", min_timestamp)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        // Set expiration on the entire key
+        let _: () = conn
+            .expire(&key, WINDOW_SECONDS)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        // Get updated count
+        self.get_active_count(namespace).await
+    }
+}

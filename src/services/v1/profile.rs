@@ -49,6 +49,7 @@ mod tests {
     use super::*;
     use crate::storage::{
         LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository,
+        WindowedCounterRepository,
     };
     use async_trait::async_trait;
     use konnektoren_core::challenges::{PerformanceRecord, Review};
@@ -89,6 +90,11 @@ mod tests {
             async fn fetch_average_rating(&self, namespace: &str) -> Result<f64, RepositoryError>;
         }
 
+        #[async_trait]
+        impl WindowedCounterRepository for ProfileRepository {
+            async fn get_active_count(&self, namespace: &str) -> Result<u32, RepositoryError>;
+            async fn record_presence(&mut self, namespace: &str) -> Result<u32, RepositoryError>;
+        }
 
         #[cfg(feature = "chat")]
         #[async_trait]

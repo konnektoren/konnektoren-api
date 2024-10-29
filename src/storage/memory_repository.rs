@@ -1,10 +1,12 @@
 use crate::storage::{
     LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository, Storage,
+    WindowedCounterRepository,
 };
 use async_trait::async_trait;
 use konnektoren_core::challenges::{PerformanceRecord, Review};
 use konnektoren_core::prelude::PlayerProfile;
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 use yew_chat::prelude::{Message, MessageReceiver, MessageSender, ReceiveError, SendError};
 #[cfg(feature = "chat")]
 use yew_chat::server::MemoryMessageStorage;
@@ -18,6 +20,7 @@ pub struct MemoryRepository {
     reviews: HashMap<String, Vec<Review>>,
     #[cfg(feature = "chat")]
     message_storage: MemoryMessageStorage,
+    active_users: HashMap<String, Vec<u64>>,
 }
 
 impl MemoryRepository {
@@ -28,6 +31,18 @@ impl MemoryRepository {
             reviews: HashMap::new(),
             #[cfg(feature = "chat")]
             message_storage: MemoryMessageStorage::new(),
+            active_users: HashMap::new(),
+        }
+    }
+
+    fn cleanup_old_entries(&mut self, namespace: &str) {
+        if let Some(timestamps) = self.active_users.get_mut(namespace) {
+            let current_time = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let window = 24 * 60 * 60;
+            timestamps.retain(|&timestamp| current_time - timestamp < window);
         }
     }
 }
@@ -153,6 +168,48 @@ impl MessageSender for MemoryRepository {
 #[cfg(feature = "chat")]
 impl MessageStorage for MemoryRepository {}
 
+#[async_trait]
+impl WindowedCounterRepository for MemoryRepository {
+    async fn get_active_count(&self, namespace: &str) -> Result<u32, RepositoryError> {
+        let current_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let window = 24 * 60 * 60; // 24 hours in seconds
+
+        let count = self
+            .active_users
+            .get(namespace)
+            .map(|timestamps| {
+                timestamps
+                    .iter()
+                    .filter(|&&timestamp| current_time - timestamp < window)
+                    .count() as u32
+            })
+            .unwrap_or(0);
+
+        Ok(count)
+    }
+
+    async fn record_presence(&mut self, namespace: &str) -> Result<u32, RepositoryError> {
+        let current_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        // Clean up old entries first
+        self.cleanup_old_entries(namespace);
+
+        // Record new presence
+        self.active_users
+            .entry(namespace.to_string())
+            .or_insert_with(Vec::new)
+            .push(current_time);
+
+        self.get_active_count(namespace).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -221,5 +278,28 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(average_rating, 4.0);
+    }
+
+    #[tokio::test]
+    async fn test_windowed_counter() {
+        let mut repo = MemoryRepository::new();
+        let namespace = "test_challenge";
+
+        // Test initial count
+        let count = repo.get_active_count(namespace).await.unwrap();
+        assert_eq!(count, 0);
+
+        // Test recording presence
+        let count = repo.record_presence(namespace).await.unwrap();
+        assert_eq!(count, 1);
+
+        // Test multiple records
+        repo.record_presence(namespace).await.unwrap();
+        let count = repo.record_presence(namespace).await.unwrap();
+        assert_eq!(count, 3);
+
+        // Test different namespace
+        let count = repo.get_active_count("other_namespace").await.unwrap();
+        assert_eq!(count, 0);
     }
 }

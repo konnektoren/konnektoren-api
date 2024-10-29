@@ -5,6 +5,7 @@ use axum::{routing::post, Router};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+pub mod challenge_presence;
 pub mod claim;
 pub mod leaderboard;
 pub mod profile;
@@ -48,6 +49,15 @@ pub fn create_router() -> Router<Arc<Mutex<dyn Storage>>> {
     let router = router.route("/chat/send/:channel", post(chat::send_message));
     #[cfg(feature = "chat")]
     let router = router.route("/chat/receive/:channel", get(chat::receive_messages));
+
+    let router = router.route(
+        "/challenges/:challenge_id/presence",
+        get(challenge_presence::get_challenge_presence),
+    );
+    let router = router.route(
+        "/challenges/:challenge_id/presence/record",
+        post(challenge_presence::record_challenge_presence),
+    );
 
     router
 }

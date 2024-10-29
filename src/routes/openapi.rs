@@ -41,6 +41,8 @@ pub struct ApiDoc;
         super::v1::review::post_review,
         super::v1::review::get_all_reviews,
         super::v1::review::get_average_rating,
+        super::v1::challenge_presence::get_challenge_presence,
+        super::v1::challenge_presence::record_challenge_presence,
         #[cfg(feature = "chat")]
         super::v1::chat::send_message,
         #[cfg(feature = "chat")]
@@ -55,6 +57,7 @@ pub struct ApiDoc;
             v1::leaderboard::LeaderboardV1Response,
             v1::review::Review,
             v1::review::ReviewsResponse,
+            v1::challenge_presence::ChallengePresenceStats,
         )
     ),
     tags(
@@ -74,6 +77,8 @@ mod tests {
         let paths = api_doc.paths.paths;
         assert!(paths.contains_key("/api/v1/profiles/{profile_id}"));
         assert!(paths.contains_key("/api/v1/profiles"));
+        assert!(paths.contains_key("/api/v1/challenges/{challenge_id}/presence"));
+        assert!(paths.contains_key("/api/v1/challenges/{challenge_id}/presence/record"));
 
         #[cfg(feature = "chat")]
         {
