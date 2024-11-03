@@ -183,23 +183,25 @@ impl LeaderboardRepository for RedisStorage {
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
 
-        let performance_record_json: String = redis::cmd("HGET")
+        let exists: bool = redis::cmd("HEXISTS")
             .arg(&hset)
-            .arg(id.clone())
+            .arg(&id)
             .query_async(&mut connection)
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-        if performance_record_json.is_empty() {
+
+        if !exists {
             return Err(RepositoryError::NotFound);
-        } else {
-            redis::cmd("HDEL")
-                .arg(&hset)
-                .arg(id.clone())
-                .query_async(&mut connection)
-                .await
-                .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-            Ok(performance_record)
         }
+
+        redis::cmd("HDEL")
+            .arg(&hset)
+            .arg(id)
+            .query_async(&mut connection)
+            .await
+            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+
+        Ok(performance_record)
     }
 }
 
