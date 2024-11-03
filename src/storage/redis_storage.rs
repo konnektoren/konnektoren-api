@@ -99,35 +99,56 @@ impl LeaderboardRepository for RedisStorage {
             .get_multiplexed_async_connection()
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-        let performance_records_data: Vec<String> = redis::cmd("HVALS")
-            .arg(hset)
+
+        // Get all keys and values
+        let records: Vec<(String, String)> = redis::cmd("HGETALL")
+            .arg(&hset)
             .query_async(&mut connection)
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+
         let mut performance_records = Vec::new();
-        for performance_record_json in performance_records_data {
+        let mut updates_needed = Vec::new();
+
+        for (key, record_json) in records {
             // Try to deserialize as PerformanceRecord first
-            if let Ok(performance_record) =
-                serde_json::from_str::<PerformanceRecord>(&performance_record_json)
-            {
-                performance_records.push(performance_record);
+            if let Ok(record) = serde_json::from_str::<PerformanceRecord>(&record_json) {
+                performance_records.push(record);
                 continue;
             }
 
-            // If deserialization as PerformanceRecord fails, try LegacyPerformanceRecord
-            if let Ok(legacy_performance_record) =
-                serde_json::from_str::<LegacyPerformanceRecord>(&performance_record_json)
+            // If that fails, try as LegacyPerformanceRecord
+            if let Ok(legacy_record) = serde_json::from_str::<LegacyPerformanceRecord>(&record_json)
             {
-                let performance_record: PerformanceRecord = legacy_performance_record.into();
-                performance_records.push(performance_record);
+                let converted_record: PerformanceRecord = legacy_record.into();
+
+                // Store the key and the new format for updating
+                updates_needed.push((key, converted_record.clone()));
+                performance_records.push(converted_record);
                 continue;
             }
 
-            // If both deserializations fail, return an error
             return Err(RepositoryError::InternalError(
                 "Invalid Performance Record format".to_string(),
             ));
         }
+
+        // Update any legacy records in the storage
+        if !updates_needed.is_empty() {
+            for (key, record) in updates_needed {
+                let record_json = serde_json::to_string(&record)
+                    .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+
+                redis::cmd("HSET")
+                    .arg(&hset)
+                    .arg(key)
+                    .arg(record_json)
+                    .query_async(&mut connection)
+                    .await
+                    .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+            }
+        }
+
         Ok(performance_records)
     }
 
@@ -173,35 +194,53 @@ impl LeaderboardRepository for RedisStorage {
         performance_record: PerformanceRecord,
     ) -> Result<PerformanceRecord, RepositoryError> {
         let hset = format!("{}:{}", PERFORMANCE_RECORDS_HSET, namespace);
-        let mut hasher = DefaultHasher::default();
-        performance_record.hash(&mut hasher);
-        let id = hasher.finish().to_string();
-
         let mut connection = self
             .client
             .get_multiplexed_async_connection()
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
 
-        let exists: bool = redis::cmd("HEXISTS")
+        // Get all records with their keys
+        let records: Vec<(String, String)> = redis::cmd("HGETALL")
             .arg(&hset)
-            .arg(&id)
             .query_async(&mut connection)
             .await
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
 
-        if !exists {
-            return Err(RepositoryError::NotFound(id.to_string()));
+        // Find the matching record and its key
+        for (key, record_json) in records {
+            let record = if let Ok(record) = serde_json::from_str::<PerformanceRecord>(&record_json)
+            {
+                record
+            } else if let Ok(legacy_record) =
+                serde_json::from_str::<LegacyPerformanceRecord>(&record_json)
+            {
+                legacy_record.into()
+            } else {
+                continue;
+            };
+
+            // Compare relevant fields to find a match
+            if record.profile_name == performance_record.profile_name
+                && record.performance_percentage == performance_record.performance_percentage
+                && record.date == performance_record.date
+                && record.challenges_performance == performance_record.challenges_performance
+            {
+                // Remove the record using its key
+                redis::cmd("HDEL")
+                    .arg(&hset)
+                    .arg(key)
+                    .query_async(&mut connection)
+                    .await
+                    .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
+
+                return Ok(performance_record);
+            }
         }
 
-        redis::cmd("HDEL")
-            .arg(&hset)
-            .arg(id)
-            .query_async(&mut connection)
-            .await
-            .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
-
-        Ok(performance_record)
+        Err(RepositoryError::NotFound(
+            "No matching record found".to_string(),
+        ))
     }
 }
 
