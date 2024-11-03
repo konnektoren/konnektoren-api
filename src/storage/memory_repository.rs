@@ -54,7 +54,7 @@ impl ProfileRepository for MemoryRepository {
     async fn fetch(&self, profile_id: String) -> Result<PlayerProfile, RepositoryError> {
         match self.profiles.get(&profile_id) {
             Some(profile) => Ok(profile.clone()),
-            None => Err(RepositoryError::NotFound),
+            None => Err(RepositoryError::NotFound(profile_id.clone())),
         }
     }
 
@@ -104,7 +104,9 @@ impl LeaderboardRepository for MemoryRepository {
                 self.performance_records.remove(i);
                 Ok(performance_record)
             }
-            None => Err(RepositoryError::NotFound),
+            None => Err(RepositoryError::NotFound(
+                performance_record.game_path_id.clone(),
+            )),
         }
     }
 }
@@ -133,7 +135,7 @@ impl ReviewRepository for MemoryRepository {
         let reviews = self
             .reviews
             .get(namespace)
-            .ok_or(RepositoryError::NotFound)?;
+            .ok_or(RepositoryError::NotFound(namespace.to_string()))?;
         let total: u32 = reviews.iter().map(|review| review.rating as u32).sum();
         let count = reviews.len() as f64;
 

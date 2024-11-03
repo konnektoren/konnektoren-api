@@ -2,7 +2,7 @@ use std::fmt;
 
 #[derive(Debug)]
 pub enum RepositoryError {
-    NotFound,
+    NotFound(String),
     InternalError(String),
     LimitReached(usize),
 }
@@ -10,7 +10,7 @@ pub enum RepositoryError {
 impl fmt::Display for RepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RepositoryError::NotFound => write!(f, "Resource not found"),
+            RepositoryError::NotFound(id) => write!(f, "Resource not found: {}", id),
             RepositoryError::InternalError(err) => write!(f, "Internal error: {}", err),
             RepositoryError::LimitReached(limit) => write!(f, "Limit reached: {}", limit),
         }

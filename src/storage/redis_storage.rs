@@ -191,7 +191,7 @@ impl LeaderboardRepository for RedisStorage {
             .map_err(|err| RepositoryError::InternalError(err.to_string()))?;
 
         if !exists {
-            return Err(RepositoryError::NotFound);
+            return Err(RepositoryError::NotFound(id.to_string()));
         }
 
         redis::cmd("HDEL")
