@@ -1,6 +1,6 @@
 use axum::Router;
 use dotenv::dotenv;
-use konnekt_session::server::{create_session_route, WebSocketServer};
+use konnekt_session::server::{create_session_route, MemoryStorage, WebSocketServer};
 use konnektoren_api::routes;
 use konnektoren_api::storage::Storage;
 use routes::openapi::ApiDoc;
@@ -29,7 +29,10 @@ async fn main() {
         Arc::new(Mutex::new(konnektoren_api::storage::MemoryRepository::new()));
 
     #[cfg(feature = "konnekt-session")]
-    let session_server = WebSocketServer::new();
+    let session_server = {
+        let memory_storage = Arc::new(MemoryStorage::new());
+        WebSocketServer::new(memory_storage.clone(), memory_storage.clone())
+    };
 
     let app = Router::new()
         .nest("/api/v1", routes::v1::create_router())
