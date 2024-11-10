@@ -1,5 +1,6 @@
 use axum::Router;
 use dotenv::dotenv;
+use konnekt_session::server::{create_session_route, WebSocketServer};
 use konnektoren_api::routes;
 use konnektoren_api::storage::Storage;
 use routes::openapi::ApiDoc;
@@ -27,12 +28,18 @@ async fn main() {
     let repo: Arc<Mutex<dyn Storage>> =
         Arc::new(Mutex::new(konnektoren_api::storage::MemoryRepository::new()));
 
+    #[cfg(feature = "konnekt-session")]
+    let session_server = WebSocketServer::new();
+
     let app = Router::new()
         .nest("/api/v1", routes::v1::create_router())
         .nest("/api/v2", routes::v2::create_router())
         .with_state(repo)
         .layer(CorsLayer::permissive())
         .merge(SwaggerUi::new("/docs").url("/api-doc/openapi.json", ApiDoc::openapi()));
+
+    #[cfg(feature = "konnekt-session")]
+    let app = app.merge(create_session_route(session_server));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
 

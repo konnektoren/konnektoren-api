@@ -37,13 +37,17 @@ uuid = { version = "1.8.0", features = ["v4"] }
 yew-chat = { git = "https://github.com/chriamue/yew-chat", features = [
     "server",
 ], default-features = false, optional = true }
+konnekt-session = { git = "https://github.com/konnektoren/konnekt-session", default-features = false, features = [
+    "server",
+], optional = true }
 
 [dev-dependencies]
 mockall = "0.12.1"
 
 [features]
-default = ["openapi", "chat"]
+default = ["openapi", "chat", "konnekt-session"]
 openapi = ["utoipa", "utoipa-swagger-ui"]
 ton = ["tonlib"]
 redis = ["dep:redis"]
 chat = ["yew-chat"]
+konnekt-session = ["dep:konnekt-session"]
