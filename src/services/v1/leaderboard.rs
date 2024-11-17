@@ -5,11 +5,16 @@ use tokio::sync::Mutex;
 
 const PERFORMANCE_RECORDS_LIMIT: usize = 10;
 
+pub enum AddPerformanceRecordResult {
+    Success(PerformanceRecord),
+    LimitReached,
+}
+
 pub async fn add_performance_record(
     namespace: &str,
     performance_record: PerformanceRecord,
     repository: Arc<Mutex<dyn Storage>>,
-) -> Result<PerformanceRecord, RepositoryError> {
+) -> Result<AddPerformanceRecordResult, RepositoryError> {
     let mut storage = repository.lock().await;
 
     // First try to add directly
@@ -17,7 +22,7 @@ pub async fn add_performance_record(
         .add_performance_record(namespace, performance_record.clone())
         .await
     {
-        Ok(record) => return Ok(record),
+        Ok(record) => return Ok(AddPerformanceRecordResult::Success(record)),
         Err(RepositoryError::LimitReached(_)) => {
             // If limit reached, get all records to compare
             let mut leaderboard = storage.fetch_performance_records(namespace).await?;
@@ -36,10 +41,10 @@ pub async fn add_performance_record(
                         .add_performance_record(namespace, performance_record.clone())
                         .await?;
 
-                    return Ok(performance_record);
+                    return Ok(AddPerformanceRecordResult::Success(performance_record));
                 }
             }
-            Err(RepositoryError::LimitReached(PERFORMANCE_RECORDS_LIMIT))
+            Ok(AddPerformanceRecordResult::LimitReached)
         }
         Err(e) => Err(e),
     }
@@ -202,7 +207,10 @@ mod tests {
         };
 
         let result = add_performance_record(namespace, new_worse_record, repository.clone()).await;
-        assert!(matches!(result, Err(RepositoryError::LimitReached(_))));
+        assert!(matches!(
+            result,
+            Ok(AddPerformanceRecordResult::LimitReached)
+        ));
 
         let new_best_record = PerformanceRecord {
             profile_name: "new_best".to_string(),

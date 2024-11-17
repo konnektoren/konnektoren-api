@@ -1,4 +1,6 @@
-use crate::services::v1::leaderboard::{add_performance_record, fetch_all_performance_records};
+use crate::services::v1::leaderboard::{
+    add_performance_record, fetch_all_performance_records, AddPerformanceRecordResult,
+};
 use crate::storage::Storage;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -91,10 +93,11 @@ pub async fn post_performance_record(
     Json(performance_record): Json<PerformanceRecord>,
 ) -> Result<Json<PerformanceRecord>, (StatusCode, String)> {
     let namespace = "leaderboard";
-    let performance_record = add_performance_record(namespace, performance_record, repository)
-        .await
-        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
-    Ok(Json(performance_record))
+    match add_performance_record(namespace, performance_record.clone(), repository).await {
+        Ok(AddPerformanceRecordResult::Success(record)) => Ok(Json(record)),
+        Ok(AddPerformanceRecordResult::LimitReached) => Ok(Json(performance_record)),
+        Err(err) => Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
+    }
 }
 
 #[utoipa::path(
@@ -115,8 +118,9 @@ pub async fn post_challenge_performance_record(
     Json(performance_record): Json<PerformanceRecord>,
 ) -> Result<Json<PerformanceRecord>, (StatusCode, String)> {
     let namespace = challenge_id.as_str();
-    let performance_record = add_performance_record(namespace, performance_record, repository)
-        .await
-        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
-    Ok(Json(performance_record))
+    match add_performance_record(namespace, performance_record.clone(), repository).await {
+        Ok(AddPerformanceRecordResult::Success(record)) => Ok(Json(record)),
+        Ok(AddPerformanceRecordResult::LimitReached) => Ok(Json(performance_record)),
+        Err(err) => Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
+    }
 }
