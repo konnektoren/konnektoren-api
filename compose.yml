@@ -45,3 +45,10 @@ services:
       - CF_TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
     depends_on:
       - server
+
+  matchbox:
+    profiles:
+      - matchbox
+    image: jhelsing/matchbox-server:v0.10.0
+    environment:
+      - MATCHBOX_SERVER_PORT=3536
