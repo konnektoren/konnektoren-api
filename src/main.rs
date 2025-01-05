@@ -1,5 +1,6 @@
 use axum::{
     extract::{MatchedPath, Request},
+    routing::get,
     Router,
 };
 use dotenv::dotenv;
@@ -60,6 +61,7 @@ async fn main() {
 
     #[cfg(feature = "metrics")]
     let app = app
+        .route("/metrics", get(konnektoren_api::metrics::metrics_handler))
         .layer(axum::middleware::from_fn_with_state(
             metrics.clone(),
             middleware::metrics::metrics_middleware,

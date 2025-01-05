@@ -53,6 +53,8 @@ opentelemetry-jaeger = { version = "0.19", features = [
     "collector_client",
     "reqwest_collector_client",
 ], optional = true }
+opentelemetry-prometheus = { version = "0.13", optional = true }
+prometheus = { version = "0.13", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = [
     "env-filter",
@@ -82,4 +84,6 @@ metrics = [
     "opentelemetry/metrics",
     "opentelemetry_sdk/metrics",
     "opentelemetry-otlp/metrics",
+    "opentelemetry-prometheus",
+    "prometheus",
 ]
