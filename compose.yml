@@ -13,7 +13,11 @@ services:
       - FAUCET_ADDRESS=${FAUCET_ADDRESS}
       - REDIS_URL=redis://redis:6379
       - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
+      - ENABLE_METRICS=${ENABLE_METRICS:-false}
       - JAEGER_ENDPOINT=${JAEGER_ENDPOINT:-http://jaeger:14268/api/traces}
+      - JAEGER_METRICS_ENDPOINT=${JAEGER_METRICS_ENDPOINT:-http://jaeger:4318/v1/metrics}
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-http://jaeger:4318/v1/metrics}
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-http://jaeger:4318/v1/traces}
     #ports:
     #  - "3000:3000"
     env_file:
@@ -61,6 +65,43 @@ services:
     image: jaegertracing/all-in-one:latest
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_OTLP_HTTP_PORT=4318
+      - COLLECTOR_OTLP_GRPC_PORT=4317
+      - METRICS_STORAGE_TYPE=prometheus
+      - METRICS_PROMETHEUS_SERVER_URL=http://prometheus:9090
+    volumes:
+      - jaeger-data:/badger
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles:
+      - metrics
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles:
+      - metrics
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    depends_on:
+      - prometheus
+
+volumes:
+  jaeger-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   default:

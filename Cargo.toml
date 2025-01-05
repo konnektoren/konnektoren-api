@@ -41,15 +41,20 @@ yew-chat = { git = "https://github.com/chriamue/yew-chat", features = [
 konnekt-session = { git = "https://github.com/konnektoren/konnekt-session", default-features = false, features = [
     "server",
 ], optional = true }
-opentelemetry = { version = "0.20", features = [
+opentelemetry = { version = "0.20", features = ["rt-tokio"], optional = true }
+opentelemetry_sdk = { version = "0.20", features = [
     "rt-tokio",
-    "trace",
+], optional = true }
+opentelemetry-otlp = { version = "0.13", features = [
+    "http-proto",
 ], optional = true }
 opentelemetry-jaeger = { version = "0.19", features = [
     "rt-tokio",
     "collector_client",
     "reqwest_collector_client",
 ], optional = true }
+opentelemetry-prometheus = { version = "0.13", optional = true }
+prometheus = { version = "0.13", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = [
     "env-filter",
@@ -63,15 +68,22 @@ time = { version = "0.3" }
 mockall = "0.12.1"
 
 [features]
-default = ["openapi", "chat", "konnekt-session", "tracing"]
+default = ["openapi", "chat", "konnekt-session", "tracing", "metrics"]
 openapi = ["utoipa", "utoipa-swagger-ui"]
 ton = ["tonlib"]
 redis = ["dep:redis"]
 chat = ["yew-chat"]
 konnekt-session = ["dep:konnekt-session"]
 tracing = [
-    "opentelemetry",
+    "opentelemetry/trace",
     "tracing-opentelemetry",
     "opentelemetry-jaeger",
     "tower-http/trace",
+]
+metrics = [
+    "opentelemetry/metrics",
+    "opentelemetry_sdk/metrics",
+    "opentelemetry-otlp/metrics",
+    "opentelemetry-prometheus",
+    "prometheus",
 ]
