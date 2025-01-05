@@ -3,11 +3,13 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: "otlp"
+  # Scrape the OpenTelemetry metrics from Jaeger
+  - job_name: "otel"
     static_configs:
-      - targets: ["jaeger:4318"]
+      - targets: ["jaeger:8889"] # OpenTelemetry Collector metrics port
     metrics_path: "/metrics"
 
+  # Scrape Jaeger's own metrics
   - job_name: "jaeger"
     static_configs:
       - targets: ["jaeger:14269"]
