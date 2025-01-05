@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  server:
+  konnektoren-api:
     build:
       context: .
       dockerfile: Dockerfile
@@ -46,7 +46,7 @@ services:
     environment:
       - CF_TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
     depends_on:
-      - server
+      - konnektoren-api
 
   matchbox:
     profiles:
@@ -61,3 +61,8 @@ services:
     image: jaegertracing/all-in-one:latest
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+
+networks:
+  default:
+    name: konnektoren-network
+    driver: bridge
