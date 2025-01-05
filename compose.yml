@@ -12,6 +12,8 @@ services:
       - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
       - FAUCET_ADDRESS=${FAUCET_ADDRESS}
       - REDIS_URL=redis://redis:6379
+      - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
+      - JAEGER_ENDPOINT=${JAEGER_ENDPOINT:-http://jaeger:14268/api/traces}
     #ports:
     #  - "3000:3000"
     env_file:
@@ -52,3 +54,10 @@ services:
     image: jhelsing/matchbox-server:v0.10.0
     environment:
       - MATCHBOX_SERVER_PORT=3536
+
+  jaeger:
+    profiles:
+      - tracing
+    image: jaegertracing/all-in-one:latest
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true

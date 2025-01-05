@@ -1,6 +1,6 @@
 [package]
 name = "konnektoren-api"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [lib]
@@ -40,6 +40,23 @@ yew-chat = { git = "https://github.com/chriamue/yew-chat", features = [
 konnekt-session = { git = "https://github.com/konnektoren/konnekt-session", default-features = false, features = [
     "server",
 ], optional = true }
+opentelemetry = { version = "0.20", features = [
+    "rt-tokio",
+    "trace",
+], optional = true }
+opentelemetry-jaeger = { version = "0.19", features = [
+    "rt-tokio",
+    "collector_client",
+    "reqwest_collector_client",
+], optional = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "env-filter",
+    "json",
+    "time",
+] }
+tracing-opentelemetry = { version = "0.21", optional = true }
+time = { version = "0.3" }
 
 [dev-dependencies]
 mockall = "0.12.1"
@@ -51,3 +68,9 @@ ton = ["tonlib"]
 redis = ["dep:redis"]
 chat = ["yew-chat"]
 konnekt-session = ["dep:konnekt-session"]
+tracing = [
+    "opentelemetry",
+    "tracing-opentelemetry",
+    "opentelemetry-jaeger",
+    "tower-http/trace",
+]
