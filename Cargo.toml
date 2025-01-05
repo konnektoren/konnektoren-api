@@ -16,6 +16,7 @@ async-trait = "0.1.80"
 axum = "0.7"
 base64 = "0.22.1"
 chrono = "0.4.38"
+http = "1.2.0"
 konnektoren-core = { git = "https://github.com/konnektoren/konnektoren-rs.git", default-features = false }
 log = "0.4.21"
 num-bigint = "0.4.5"

@@ -4,6 +4,7 @@ use axum::{
 };
 use dotenv::dotenv;
 use konnekt_session::server::v2::{create_session_route, ConnectionHandler, MemoryStorage};
+use konnektoren_api::middleware;
 use konnektoren_api::{routes, storage::Storage, telemetry::init_telemetry};
 use routes::openapi::ApiDoc;
 use std::net::SocketAddr;
@@ -48,26 +49,9 @@ async fn main() {
         .with_state(repo);
 
     #[cfg(feature = "tracing")]
-    let app = app.layer(
-        TraceLayer::new_for_http()
-            .make_span_with(|request: &Request<_>| {
-                let matched_path = request
-                    .extensions()
-                    .get::<MatchedPath>()
-                    .map(MatchedPath::as_str);
-
-                tracing::info_span!(
-                    "http_request",
-                    method = ?request.method(),
-                    matched_path,
-                    uri = ?request.uri(),
-                    version = ?request.version(),
-                )
-            })
-            .on_request(trace::DefaultOnRequest::new().level(Level::INFO))
-            .on_response(trace::DefaultOnResponse::new().level(Level::INFO))
-            .on_failure(trace::DefaultOnFailure::new().level(Level::ERROR)),
-    );
+    let app = app.layer(axum::middleware::from_fn(
+        middleware::trace::trace_middleware,
+    ));
 
     let app = app
         .layer(CorsLayer::permissive())
