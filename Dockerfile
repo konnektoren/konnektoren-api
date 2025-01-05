@@ -4,7 +4,7 @@ COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo "fn main() {println!(\"if you see this, the build broke\")}" > src/main.rs && touch src/lib.rs
 RUN cargo check
 COPY src ./src
-RUN cargo build --features="redis" --release
+RUN cargo build --features="tracing,redis" --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt install -y openssl ca-certificates \
