@@ -6,6 +6,8 @@ use dotenv::dotenv;
 use konnekt_session::server::v2::{create_session_route, ConnectionHandler, MemoryStorage};
 use konnektoren_api::middleware;
 use konnektoren_api::{routes, storage::Storage, telemetry::init_telemetry};
+#[cfg(feature = "metrics")]
+use opentelemetry::metrics;
 use routes::openapi::ApiDoc;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -24,6 +26,9 @@ async fn main() {
     init_telemetry()
         .await
         .expect("Failed to initialize telemetry");
+
+    #[cfg(feature = "metrics")]
+    let metrics = konnektoren_api::metrics::Metrics::new().expect("Failed to initialize metrics");
 
     #[cfg(feature = "redis")]
     let repo: Arc<Mutex<dyn Storage>> = {
@@ -52,6 +57,14 @@ async fn main() {
     let app = app.layer(axum::middleware::from_fn(
         middleware::trace::trace_middleware,
     ));
+
+    #[cfg(feature = "metrics")]
+    let app = app
+        .layer(axum::middleware::from_fn_with_state(
+            metrics.clone(),
+            middleware::metrics::metrics_middleware,
+        ))
+        .with_state(metrics);
 
     let app = app
         .layer(CorsLayer::permissive())
