@@ -7,7 +7,10 @@ COPY src ./src
 RUN cargo build --features="tracing,redis" --release
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt install -y openssl ca-certificates \
+RUN apt-get update && apt install -y \
+    openssl \
+    ca-certificates \
+    libcurl4 \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
