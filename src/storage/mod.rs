@@ -1,3 +1,4 @@
+mod coupon_repository;
 mod error;
 mod leaderboard_repository;
 mod memory_repository;
@@ -6,13 +7,17 @@ mod review_repository;
 mod windowed_counter_repository;
 
 #[cfg(not(feature = "chat"))]
-pub trait Storage: ProfileRepository + LeaderboardRepository + ReviewRepository {}
+pub trait Storage:
+    ProfileRepository + LeaderboardRepository + ReviewRepository + CouponRepository
+{
+}
 
 #[cfg(feature = "chat")]
 pub trait Storage:
     ProfileRepository
     + LeaderboardRepository
     + ReviewRepository
+    + CouponRepository
     + MessageStorage
     + WindowedCounterRepository
 {
@@ -21,6 +26,7 @@ pub trait Storage:
 #[cfg(feature = "redis")]
 mod redis_storage;
 
+pub use coupon_repository::CouponRepository;
 pub use error::RepositoryError;
 pub use leaderboard_repository::LeaderboardRepository;
 pub use memory_repository::MemoryRepository;
