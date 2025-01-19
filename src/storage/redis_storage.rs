@@ -1,11 +1,11 @@
 use crate::compatibility::LegacyPerformanceRecord;
 use crate::storage::{
-    LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository, Storage,
-    WindowedCounterRepository,
+    CouponRepository, LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository,
+    Storage, WindowedCounterRepository,
 };
 use async_trait::async_trait;
 use konnektoren_core::challenges::{PerformanceRecord, Review};
-use konnektoren_core::prelude::PlayerProfile;
+use konnektoren_core::prelude::{Coupon, PlayerProfile};
 use redis::AsyncCommands;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use yew_chat::prelude::{Message, MessageReceiver, MessageSender, ReceiveError, SendError};
@@ -25,6 +25,8 @@ const CHAT_MESSAGES_HSET: &str = "chat_messages";
 
 const USER_COUNTER_KEY: &str = "user_counter";
 const WINDOW_SECONDS: i64 = 24 * 60 * 60;
+
+const COUPONS_HSET: &str = "coupons";
 
 impl RedisStorage {
     pub fn new(url: &str) -> Self {
@@ -320,6 +322,71 @@ impl ReviewRepository for RedisStorage {
         }
 
         Ok(all_reviews)
+    }
+}
+
+#[async_trait]
+impl CouponRepository for RedisStorage {
+    async fn fetch(&self, coupon_code: &str) -> Result<Option<Coupon>, RepositoryError> {
+        let mut conn = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let coupon_json: Option<String> = conn
+            .hget(COUPONS_HSET, coupon_code)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        match coupon_json {
+            Some(json) => {
+                let coupon = serde_json::from_str(&json)
+                    .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+                Ok(Some(coupon))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn fetch_all(&self) -> Result<Vec<Coupon>, RepositoryError> {
+        let mut conn = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let coupons_data: Vec<String> = conn
+            .hvals(COUPONS_HSET)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let coupons = coupons_data
+            .into_iter()
+            .map(|data| {
+                serde_json::from_str(&data)
+                    .map_err(|e| RepositoryError::InternalError(e.to_string()))
+            })
+            .collect::<Result<Vec<Coupon>, RepositoryError>>()?;
+
+        Ok(coupons)
+    }
+
+    async fn save(&mut self, coupon: Coupon) -> Result<Coupon, RepositoryError> {
+        let mut conn = self
+            .client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        let coupon_json = serde_json::to_string(&coupon)
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        conn.hset(COUPONS_HSET, &coupon.code, &coupon_json)
+            .await
+            .map_err(|e| RepositoryError::InternalError(e.to_string()))?;
+
+        Ok(coupon)
     }
 }
 
