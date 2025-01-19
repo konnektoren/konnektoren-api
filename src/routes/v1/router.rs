@@ -37,6 +37,19 @@ pub fn create_router() -> Router<Arc<Mutex<dyn Storage>>> {
     let router = router.route("/reviews", post(review::post_review));
     let router = router.route("/reviews", get(review::get_all_reviews));
 
+    // Coupon routes
+    let router = router.route("/coupons", post(coupon::create_handler));
+    let router = router.route("/coupons", get(coupon::list_handler));
+    let router = router.route("/coupons/:code", get(coupon::get_handler));
+    let router = router.route(
+        "/coupons/:code/validate/:challenge_id",
+        get(coupon::validate_handler),
+    );
+    let router = router.route(
+        "/coupons/:code/redeem/:challenge_id",
+        post(coupon::redeem_handler),
+    );
+
     #[cfg(feature = "chat")]
     let router = router.route("/chat/send/:channel", post(chat::send_message));
     #[cfg(feature = "chat")]
