@@ -43,6 +43,12 @@ pub struct ApiDoc;
         super::v1::review::get_average_rating,
         super::v1::challenge_presence::get_challenge_presence,
         super::v1::challenge_presence::record_challenge_presence,
+        // Coupon endpoints
+        super::v1::coupon::create_handler,
+        super::v1::coupon::get_handler,
+        super::v1::coupon::list_handler,
+        super::v1::coupon::validate_handler,
+        super::v1::coupon::redeem_handler,
         #[cfg(feature = "chat")]
         super::v1::chat::send_message,
         #[cfg(feature = "chat")]
@@ -58,6 +64,8 @@ pub struct ApiDoc;
             v1::review::Review,
             v1::review::ReviewsResponse,
             v1::challenge_presence::ChallengePresenceStats,
+            v1::coupon::CouponResponse,
+            v1::coupon::CouponsResponse,
         )
     ),
     tags(
@@ -79,6 +87,12 @@ mod tests {
         assert!(paths.contains_key("/api/v1/profiles"));
         assert!(paths.contains_key("/api/v1/challenges/{challenge_id}/presence"));
         assert!(paths.contains_key("/api/v1/challenges/{challenge_id}/presence/record"));
+
+        // Coupon endpoint tests
+        assert!(paths.contains_key("/api/v1/coupons"));
+        assert!(paths.contains_key("/api/v1/coupons/{code}"));
+        assert!(paths.contains_key("/api/v1/coupons/{code}/validate/{challenge_id}"));
+        assert!(paths.contains_key("/api/v1/coupons/{code}/redeem/{challenge_id}"));
 
         #[cfg(feature = "chat")]
         {

@@ -1,10 +1,10 @@
 use crate::storage::{
-    LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository, Storage,
-    WindowedCounterRepository,
+    CouponRepository, LeaderboardRepository, ProfileRepository, RepositoryError, ReviewRepository,
+    Storage, WindowedCounterRepository,
 };
 use async_trait::async_trait;
 use konnektoren_core::challenges::{PerformanceRecord, Review};
-use konnektoren_core::prelude::PlayerProfile;
+use konnektoren_core::prelude::{Coupon, PlayerProfile};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use yew_chat::prelude::{Message, MessageReceiver, MessageSender, ReceiveError, SendError};
@@ -18,6 +18,7 @@ pub struct MemoryRepository {
     profiles: HashMap<String, PlayerProfile>,
     performance_records: Vec<PerformanceRecord>,
     reviews: HashMap<String, Vec<Review>>,
+    coupons: HashMap<String, Coupon>,
     #[cfg(feature = "chat")]
     message_storage: MemoryMessageStorage,
     active_users: HashMap<String, Vec<u64>>,
@@ -29,6 +30,7 @@ impl MemoryRepository {
             profiles: HashMap::new(),
             performance_records: Vec::new(),
             reviews: HashMap::new(),
+            coupons: HashMap::new(),
             #[cfg(feature = "chat")]
             message_storage: MemoryMessageStorage::new(),
             active_users: HashMap::new(),
@@ -151,6 +153,22 @@ impl ReviewRepository for MemoryRepository {
     }
 }
 
+#[async_trait]
+impl CouponRepository for MemoryRepository {
+    async fn fetch(&self, coupon_code: &str) -> Result<Option<Coupon>, RepositoryError> {
+        Ok(self.coupons.get(coupon_code).cloned())
+    }
+
+    async fn fetch_all(&self) -> Result<Vec<Coupon>, RepositoryError> {
+        Ok(self.coupons.values().cloned().collect())
+    }
+
+    async fn save(&mut self, mut coupon: Coupon) -> Result<Coupon, RepositoryError> {
+        self.coupons.insert(coupon.code.clone(), coupon.clone());
+        Ok(coupon)
+    }
+}
+
 #[cfg(feature = "chat")]
 #[async_trait]
 impl MessageReceiver for MemoryRepository {
@@ -215,13 +233,18 @@ impl WindowedCounterRepository for MemoryRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{Duration, Utc};
 
     #[tokio::test]
     async fn test_fetch_profile() {
         let mut repo = MemoryRepository::new();
         let profile = PlayerProfile::new("example_user_id".to_string());
-        repo.save(profile.clone()).await.unwrap();
-        let fetched_profile = repo.fetch("example_user_id".to_string()).await.unwrap();
+        ProfileRepository::save(&mut repo, profile.clone())
+            .await
+            .unwrap();
+        let fetched_profile = ProfileRepository::fetch(&repo, "example_user_id".to_string())
+            .await
+            .unwrap();
         assert_eq!(profile, fetched_profile);
     }
 
@@ -230,8 +253,12 @@ mod tests {
         let mut repo = MemoryRepository::new();
         let profile1 = PlayerProfile::new("example_user_id1".to_string());
         let profile2 = PlayerProfile::new("example_user_id2".to_string());
-        repo.save(profile1.clone()).await.unwrap();
-        repo.save(profile2.clone()).await.unwrap();
+        ProfileRepository::save(&mut repo, profile1.clone())
+            .await
+            .unwrap();
+        ProfileRepository::save(&mut repo, profile2.clone())
+            .await
+            .unwrap();
         let profiles = ProfileRepository::fetch_all(&repo).await.unwrap();
         assert_eq!(profiles.len(), 2);
         assert!(profiles.contains(&profile1));
@@ -303,5 +330,67 @@ mod tests {
         // Test different namespace
         let count = repo.get_active_count("other_namespace").await.unwrap();
         assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn test_save_coupon() {
+        let mut repo = MemoryRepository::new();
+        let coupon = Coupon::new(
+            "TESTCOUPON".to_string(),
+            vec!["challenge1".to_string()],
+            1,
+            Utc::now() + Duration::days(7),
+        );
+        let saved_coupon = CouponRepository::save(&mut repo, coupon.clone())
+            .await
+            .unwrap();
+        assert_eq!(saved_coupon, coupon);
+        assert_eq!(repo.coupons.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_fetch_coupon() {
+        let mut repo = MemoryRepository::new();
+        let coupon = Coupon::new(
+            "TESTCOUPON".to_string(),
+            vec!["challenge1".to_string()],
+            1,
+            Utc::now() + Duration::days(7),
+        );
+        CouponRepository::save(&mut repo, coupon.clone())
+            .await
+            .unwrap();
+        let fetched_coupon = CouponRepository::fetch(&repo, "TESTCOUPON")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(fetched_coupon, coupon);
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_coupons() {
+        let mut repo = MemoryRepository::new();
+        let coupon1 = Coupon::new(
+            "TESTCOUPON1".to_string(),
+            vec!["challenge1".to_string()],
+            1,
+            Utc::now() + Duration::days(7),
+        );
+        let coupon2 = Coupon::new(
+            "TESTCOUPON2".to_string(),
+            vec!["challenge2".to_string()],
+            1,
+            Utc::now() + Duration::days(7),
+        );
+        CouponRepository::save(&mut repo, coupon1.clone())
+            .await
+            .unwrap();
+        CouponRepository::save(&mut repo, coupon2.clone())
+            .await
+            .unwrap();
+        let coupons = CouponRepository::fetch_all(&repo).await.unwrap();
+        assert_eq!(coupons.len(), 2);
+        assert!(coupons.contains(&coupon1));
+        assert!(coupons.contains(&coupon2));
     }
 }
