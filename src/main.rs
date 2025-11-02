@@ -6,7 +6,11 @@ use axum::{
 use dotenv::dotenv;
 use konnekt_session::server::v2::{create_session_route, ConnectionHandler, MemoryStorage};
 use konnektoren_api::middleware;
-use konnektoren_api::{routes, storage::Storage, telemetry::init_telemetry};
+use konnektoren_api::{
+    routes::{self, health},
+    storage::Storage,
+    telemetry::init_telemetry,
+};
 #[cfg(feature = "metrics")]
 use opentelemetry::metrics;
 use routes::openapi::ApiDoc;
@@ -50,6 +54,8 @@ async fn main() {
     };
 
     let app = Router::new()
+        .route("/health", get(health::health_check))
+        .route("/ready", get(health::readiness_check))
         .nest("/api/v1", routes::v1::create_router())
         .nest("/api/v2", routes::v2::create_router())
         .with_state(repo);

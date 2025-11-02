@@ -7,18 +7,24 @@ use utoipa::OpenApi;
 #[openapi(
     // List of API endpoints to be included in the documentation.
     paths(
+        super::health::health_check,
+        super::health::readiness_check,
         super::v1::claim::claim_tokens,
         super::v2::claim::claim_tokens,
     ),
     // Schema components for requests and responses used across the API.
     components(
         schemas(
+            super::health::HealthResponse,
+            super::health::ReadinessResponse,
+            super::health::HealthChecks,
             v1::claim::ClaimRequest,
             v2::claim::ClaimV2Request,
             v2::claim::ClaimV2Response,
         )
     ),
     tags(
+        (name = "health", description = "Health check endpoints"),
         (name = "API", description = "Konnektoren API")
     )
 )]
